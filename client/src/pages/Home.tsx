@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import SectionCard from "@/components/SectionCard";
+import RecentPostsSidebar from "@/components/RecentPostsSidebar";
 import Footer from "@/components/Footer";
 import ThemeToggle from "@/components/ThemeToggle";
 import heroImage from "@assets/stock_images/abstract_technology__0bba531a.jpg";
@@ -33,6 +34,14 @@ export default function Home() {
     },
   ];
 
+  // TODO: remove mock functionality
+  const recentPosts = [
+    { id: "eng-1", title: "Sistema de Control IoT con Arduino", category: "Ingeniería", date: "14 Oct 2025" },
+    { id: "travel-1", title: "Ascenso al Himalaya: Una Aventura Épica", category: "Viajes", date: "13 Oct 2025" },
+    { id: "sports-1", title: "Tour de Francia 2025: Análisis de la Etapa Reina", category: "Deportes", date: "12 Oct 2025" },
+    { id: "eng-2", title: "Algoritmo de Optimización en Python", category: "Ingeniería", date: "10 Oct 2025" },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="fixed top-4 right-4 z-50">
@@ -44,19 +53,29 @@ export default function Home() {
         
         <section className="py-16 px-4 sm:px-6">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12 space-y-3">
-              <h2 className="text-3xl md:text-4xl font-heading font-bold" data-testid="text-sections-title">
-                Explora las Secciones
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto" data-testid="text-sections-subtitle">
-                Descubre contenido organizado por temas. Haz clic en cualquier sección para ver todas las publicaciones.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sections.map((section) => (
-                <SectionCard key={section.category} {...section} />
-              ))}
+            <div className="flex gap-8">
+              <div className="flex-1">
+                <div className="text-center mb-12 space-y-3">
+                  <h2 className="text-3xl md:text-4xl font-heading font-bold" data-testid="text-sections-title">
+                    Explora las Secciones
+                  </h2>
+                  <p className="text-muted-foreground max-w-2xl mx-auto" data-testid="text-sections-subtitle">
+                    Descubre contenido organizado por temas. Haz clic en cualquier sección para ver todas las publicaciones.
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {sections.map((section) => (
+                    <SectionCard key={section.category} {...section} />
+                  ))}
+                </div>
+              </div>
+
+              <aside className="hidden lg:block w-80 flex-shrink-0">
+                <div className="sticky top-20">
+                  <RecentPostsSidebar posts={recentPosts} />
+                </div>
+              </aside>
             </div>
           </div>
         </section>
