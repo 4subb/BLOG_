@@ -1,173 +1,122 @@
+import { useState, useEffect } from "react";
+import { useRoute, Link } from "wouter";
+import { type Post } from "@shared/schema";
 import Header from "@/components/Header";
-import PostComments from "@/components/PostComments";
-import RecentPostsSidebar from "@/components/RecentPostsSidebar";
 import Footer from "@/components/Footer";
-import ThemeToggle from "@/components/ThemeToggle";
-import { useRoute } from "wouter";
-import { Calendar, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
-import engineeringImage from "@assets/stock_images/modern_engineering_w_afeecc6f.jpg";
+import { Calendar, MapPin, Send} from "lucide-react"; // Importamos flechas
+import { Button } from "@/components/ui/button";
+import LikeButton from "@/components/LikeButton";
+import BookmarkButton from "@/components/BookmarkButton";
+import CommentSection from "@/components/CommentSection";
+import ThemeToggle from "@/components/ThemeToggle";
+import DOMPurify from 'dompurify';
+import NavButton from "@/components/NavButton"; // <-- ¡Importar esto!
 
-export default function PostDetail() {
+// Tipo para la respuesta de la API
+type PostData = {
+  current: Post;
+  prev?: Post;
+  next?: Post;
+};
+
+export default function PostDetails() {
   const [, params] = useRoute("/post/:id");
   const postId = params?.id;
 
-  // TODO: remove mock functionality - fetch real post data
-  const mockPost = {
-    id: postId || "1",
-    title: "Sistema de Control IoT con Arduino",
-    content: `
-# Introducción
+  const [data, setData] = useState<PostData | null>(null); // Guardamos todo el paquete
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-Este proyecto muestra el desarrollo completo de un sistema de control IoT utilizando Arduino y diversos sensores. El objetivo principal es crear un sistema escalable y modular que permita el monitoreo y control remoto de dispositivos.
+  useEffect(() => {
+    if (!postId) return;
+    const fetchPost = async () => {
+      try {
+        setIsLoading(true);
+        setError(false);
+        // Hacemos scroll arriba al cambiar de post
+        window.scrollTo(0, 0); 
+        
+        const response = await fetch(`http://localhost:5000/api/posts/${postId}`, { credentials: 'include' });
+        if (!response.ok) throw new Error("Error al cargar post");
+        const result = await response.json();
+        setData(result);
+      } catch (err) {
+        console.error(err);
+        setError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPost();
+  }, [postId]); // Se ejecuta cada vez que el ID cambia (al navegar)
 
-## Componentes Utilizados
-
-- Arduino Uno R3
-- Sensor de temperatura DHT22
-- Módulo WiFi ESP8266
-- Relés de 5V
-
-## Implementación
-
-El código principal está escrito en C++ y utiliza las bibliotecas estándar de Arduino. A continuación se muestra un fragmento del código principal:
-
-\`\`\`cpp
-#include <DHT.h>
-#include <ESP8266WiFi.h>
-
-#define DHTPIN 2
-#define DHTTYPE DHT22
-
-DHT dht(DHTPIN, DHTTYPE);
-
-void setup() {
-  Serial.begin(9600);
-  dht.begin();
-  WiFi.begin("SSID", "PASSWORD");
-}
-
-void loop() {
-  float temp = dht.readTemperature();
-  Serial.println(temp);
-  delay(2000);
-}
-\`\`\`
-
-## Resultados
-
-El sistema funciona correctamente y permite el monitoreo en tiempo real de la temperatura ambiente. Las pruebas mostraron una precisión del 98% comparado con termómetros calibrados.
-
-## Conclusiones
-
-Este proyecto demuestra la viabilidad de crear sistemas IoT con componentes de bajo costo. Las siguientes mejoras incluirán la integración con plataformas cloud como AWS IoT.
-    `,
-    category: "Ingeniería",
-    date: "14 Oct 2025",
-    imageUrl: engineeringImage,
-    tags: ["IoT", "Arduino", "C++"],
-    views: 1247,
-    likes: 89,
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    alert("¡Enlace copiado!");
   };
 
-  // TODO: remove mock functionality
-  const mockComments = [
-    { id: "1", author: "María González", content: "Excelente tutorial, muy completo. ¿Qué librería recomiendas para la comunicación WiFi?", date: "Hace 2 horas" },
-    { id: "2", author: "Carlos Ruiz", content: "Me sirvió mucho para mi proyecto de tesis. Gracias por compartir!", date: "Hace 1 día" },
-  ];
+  if (isLoading) return <div className="min-h-screen flex flex-col"><Header /><main className="flex-1 flex items-center justify-center py-20"><div className="text-lg text-muted-foreground animate-pulse">Cargando...</div></main><Footer /></div>;
+  if (error || !data) return <div className="min-h-screen flex flex-col"><Header /><main className="flex-1 flex items-center justify-center py-20"><div className="text-lg text-destructive">Post no encontrado.</div></main><Footer /></div>;
 
-  const recentPosts = [
-    { id: "eng-2", title: "Algoritmo de Optimización en Python", category: "Ingeniería", date: "10 Oct 2025" },
-    { id: "travel-1", title: "Ascenso al Himalaya: Una Aventura Épica", category: "Viajes", date: "13 Oct 2025" },
-    { id: "sports-1", title: "Tour de Francia 2025: Análisis de la Etapa Reina", category: "Deportes", date: "12 Oct 2025" },
-  ];
+  const { current: post, prev, next } = data;
+  const formattedDate = new Date(post.createdAt).toLocaleDateString();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="fixed top-4 right-4 z-50">
-        <ThemeToggle />
-      </div>
+    <div className="min-h-screen flex flex-col bg-background">
+      <div className="fixed top-4 right-4 z-50"> <ThemeToggle /> </div>
       <Header />
-      <main className="flex-1">
-        <article className="py-12 px-4 sm:px-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex gap-8">
-              <div className="flex-1 max-w-4xl">
-                <Link href="/">
-                  <Button variant="ghost" size="sm" className="mb-6" data-testid="button-back">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Volver
-                  </Button>
-                </Link>
-
-                <div className="space-y-8">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="secondary" data-testid="badge-category">
-                        {mockPost.category}
-                      </Badge>
-                      {mockPost.tags.map((tag, idx) => (
-                        <Badge key={idx} variant="outline">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                    
-                    <h1 className="text-4xl md:text-5xl font-heading font-bold" data-testid="text-post-title">
-                      {mockPost.title}
-                    </h1>
-                    
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span data-testid="text-post-date">{mockPost.date}</span>
-                    </div>
-                  </div>
-
-                  {mockPost.imageUrl && (
-                    <div className="relative overflow-hidden rounded-lg border aspect-video">
-                      <img
-                        src={mockPost.imageUrl}
-                        alt={mockPost.title}
-                        className="w-full h-full object-cover"
-                        data-testid="img-post-hero"
-                      />
-                    </div>
-                  )}
-
-                  <div className="prose prose-lg dark:prose-invert max-w-none" data-testid="content-post-body">
-                    {mockPost.content.split('\n').map((line, idx) => {
-                      if (line.startsWith('# ')) {
-                        return <h2 key={idx} className="text-3xl font-heading font-bold mt-8 mb-4">{line.substring(2)}</h2>;
-                      } else if (line.startsWith('## ')) {
-                        return <h3 key={idx} className="text-2xl font-heading font-semibold mt-6 mb-3">{line.substring(3)}</h3>;
-                      } else if (line.startsWith('```')) {
-                        return null;
-                      } else if (line.trim() === '') {
-                        return <div key={idx} className="h-4" />;
-                      } else {
-                        return <p key={idx} className="text-foreground/90 leading-relaxed mb-4">{line}</p>;
-                      }
-                    })}
-                  </div>
-
-                  <PostComments
-                    postId={mockPost.id}
-                    views={mockPost.views}
-                    likes={mockPost.likes}
-                    comments={mockComments}
-                  />
-                </div>
+      
+      <main className="flex-1 py-12 px-4 sm:px-6">
+        <article className="max-w-4xl mx-auto">
+          
+          {/* Imagen */}
+          {post.imageUrl && (
+            <div className="flex justify-center mb-8">
+              <div className="relative max-w-full rounded-xl overflow-hidden border border-border/50 shadow-sm">
+                <img src={post.imageUrl} alt={post.title} className="block w-auto h-auto max-h-[650px]" />
               </div>
+            </div>
+          )}
 
-              <aside className="hidden lg:block w-80 flex-shrink-0">
-                <div className="sticky top-20">
-                  <RecentPostsSidebar posts={recentPosts} />
-                </div>
-              </aside>
+          {/* Barra Superior */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-4 border-b border-border/50">
+            <div className="flex flex-wrap items-center gap-4">
+              <Badge variant="secondary" className="text-sm px-3 py-1 capitalize font-medium">{post.category}</Badge>
+              <div className="flex items-center text-sm text-muted-foreground"><Calendar className="h-4 w-4 mr-2 opacity-70" /> <span>{formattedDate}</span></div>
+              {post.country && <div className="flex items-center text-sm text-muted-foreground"><MapPin className="h-4 w-4 mr-2 opacity-70" /> <span>{post.country}</span></div>}
+            </div>
+            <div className="flex items-center gap-2">
+              <LikeButton postId={post.id} />
+              <BookmarkButton postId={post.id} />
+              <Button variant="ghost" size="icon" onClick={handleShare}><Send className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors rotate-15" /></Button>
             </div>
           </div>
+
+          <h1 className="text-4xl md:text-5xl font-heading font-bold mb-8 leading-tight">{post.title}</h1>
+          
+          <div className="prose prose-lg md:prose-xl dark:prose-invert max-w-none text-muted-foreground leading-relaxed ql-editor" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }} />
+
+          {/* Tags */}
+          {post.tags && post.tags.length > 0 && (
+            <div className="mt-12 pt-8 border-t border-border/50">
+              <div className="flex flex-wrap gap-2">
+                {post.tags.map((tag, i) => <Badge key={i} variant="outline">#{tag}</Badge>)}
+              </div>
+            </div>
+          )}
+
+          {/* --- NAVEGACIÓN ANTERIOR / SIGUIENTE (CON IMAGEN Y FILTRO) --- */}
+          <div className="mt-16 pt-12 border-t border-border">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Usamos el componente NavButton para ambas direcciones */}
+              <NavButton post={prev} direction="prev" />
+              <NavButton post={next} direction="next" />
+            </div>
+          </div>
+
+          {/* Comentarios */}
+          <div className="mt-12"> <CommentSection postId={post.id} /> </div>
         </article>
       </main>
       <Footer />

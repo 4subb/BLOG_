@@ -1,47 +1,47 @@
+import { useState, useEffect } from "react";
+import { type Post } from "@shared/schema";
+// import { Link } from "wouter"; // <-- ¡YA NO LO NECESITAMOS AQUÍ!
 import Header from "@/components/Header";
-import PostCard from "@/components/PostCard";
+import PostCard from "@/components/PostCard"; 
 import RecentPostsSidebar from "@/components/RecentPostsSidebar";
 import Footer from "@/components/Footer";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Code2 } from "lucide-react";
-import engineeringImage from "@assets/stock_images/modern_engineering_w_afeecc6f.jpg";
 
 export default function Engineering() {
-  // TODO: remove mock functionality
-  const mockPosts = [
-    {
-      id: "eng-1",
-      title: "Sistema de Control IoT con Arduino",
-      excerpt: "Implementación completa de un sistema de monitoreo y control para dispositivos IoT usando Arduino, sensores de temperatura y comunicación WiFi.",
-      category: "Ingeniería",
-      date: "14 Oct 2025",
-      imageUrl: engineeringImage,
-      tags: ["IoT", "Arduino", "C++"],
-    },
-    {
-      id: "eng-2",
-      title: "Algoritmo de Optimización en Python",
-      excerpt: "Desarrollo de un algoritmo de optimización para resolver problemas de rutas usando programación dinámica y técnicas de branch and bound.",
-      category: "Ingeniería",
-      date: "10 Oct 2025",
-      tags: ["Python", "Algoritmos", "Optimización"],
-    },
-    {
-      id: "eng-3",
-      title: "Diseño de PCB para Sensor de Calidad del Aire",
-      excerpt: "Proceso completo de diseño de una placa de circuito impreso para un sensor de calidad del aire con conectividad Bluetooth.",
-      category: "Ingeniería",
-      date: "5 Oct 2025",
-      imageUrl: engineeringImage,
-      tags: ["PCB", "Hardware", "Electrónica"],
-    },
-  ];
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const recentPosts = [
-    { id: "eng-1", title: "Sistema de Control IoT con Arduino", category: "Ingeniería", date: "14 Oct 2025" },
-    { id: "travel-1", title: "Ascenso al Himalaya: Una Aventura Épica", category: "Viajes", date: "13 Oct 2025" },
-    { id: "sports-1", title: "Tour de Francia 2025: Análisis de la Etapa Reina", category: "Deportes", date: "12 Oct 2025" },
-  ];
+  useEffect(() => {
+    const fetchEngineeringPosts = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch('http://localhost:5000/api/posts/categoria/ingenieria', {
+          credentials: 'include' 
+        });
+        if (!response.ok) throw new Error('Error cargando posts');
+        const data = await response.json();
+        setPosts(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false); 
+      }
+    };
+    fetchEngineeringPosts();
+  }, []);
+
+  // Preparamos los datos (El "truco" para que sea automático)
+  const viewPosts = posts.map(post => ({
+    ...post,
+    date: new Date(post.createdAt).toLocaleDateString(),
+    excerpt: post.content.replace(/<[^>]*>?/gm, '').substring(0, 100) + "...",
+    imageUrl: post.imageUrl || undefined,
+    country: post.country || undefined,
+    tags: post.tags || []
+  }));
+
+  const recentPosts = viewPosts.slice(0, 3);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -50,6 +50,7 @@ export default function Engineering() {
       </div>
       <Header />
       <main className="flex-1">
+        
         <div className="bg-gradient-to-b from-muted/30 to-background py-12 px-4 sm:px-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-4 mb-4">
@@ -57,12 +58,8 @@ export default function Engineering() {
                 <Code2 className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h1 className="text-4xl md:text-5xl font-heading font-bold" data-testid="text-page-title">
-                  Ingeniería
-                </h1>
-                <p className="text-muted-foreground mt-2" data-testid="text-page-subtitle">
-                  Proyectos, código y documentación técnica
-                </p>
+                <h1 className="text-4xl md:text-5xl font-heading font-bold">Ingeniería</h1>
+                <p className="text-muted-foreground mt-2">Proyectos, código y documentación técnica</p>
               </div>
             </div>
           </div>
@@ -72,11 +69,19 @@ export default function Engineering() {
           <div className="max-w-7xl mx-auto">
             <div className="flex gap-8">
               <div className="flex-1">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {mockPosts.map((post) => (
-                    <PostCard key={post.id} {...post} />
-                  ))}
-                </div>
+                {isLoading ? (
+                  <p>Cargando posts...</p>
+                ) : viewPosts.length === 0 ? (
+                  <p>No hay posts todavía.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* ¡AQUÍ ESTÁ EL ARREGLO! */}
+                    {/* Quitamos el <Link> envolvente. PostCard ya tiene el link adentro. */}
+                    {viewPosts.map((post) => (
+                      <PostCard key={post.id} {...post} />
+                    ))}
+                  </div>
+                )}
               </div>
 
               <aside className="hidden lg:block w-80 flex-shrink-0">

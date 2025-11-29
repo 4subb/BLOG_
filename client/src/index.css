@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playwrite+US+Trad+Guides&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -258,10 +261,6 @@
     pointer-events: none;
   }
 
-  .no-default-hover-elevate {}
-
-  .no-default-active-elevate {}
-
   .toggle-elevate::before,
   .toggle-elevate-2::before {
     content: "";
@@ -317,4 +316,103 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+}
+
+/* --- REGLAS PARA EL EDITOR DE TEXTO (React Quill) --- */
+
+/* 1. Fuente: Arial */
+.ql-font-arial {
+  font-family: 'Arial', sans-serif;
+}
+/* 2. Fuente: Courier New (Monospace) */
+.ql-font-courier-new {
+  font-family: 'Courier New', monospace;
+}
+/* 3. Fuente: Georgia (Serif) */
+.ql-font-georgia {
+  font-family: 'Georgia', serif;
+}
+/* 4. Fuente: Lucida */
+.ql-font-lucida {
+  font-family: 'Lucida Sans Unicode', 'Lucida Grande', sans-serif;
+}
+/* 5. Fuente: Roboto (La de tu sitio) */
+.ql-font-roboto {
+  font-family: 'Roboto', sans-serif; /* Asegúrate de tenerla importada o usa el default */
+}
+
+/* Hacemos que el dropdown del editor muestre los nombres correctos */
+.ql-picker.ql-font .ql-picker-label[data-value="arial"]::before,
+.ql-picker.ql-font .ql-picker-item[data-value="arial"]::before {
+  content: "Arial";
+  font-family: 'Arial', sans-serif;
+}
+.ql-picker.ql-font .ql-picker-label[data-value="courier-new"]::before,
+.ql-picker.ql-font .ql-picker-item[data-value="courier-new"]::before {
+  content: "Courier New";
+  font-family: 'Courier New', monospace;
+}
+.ql-picker.ql-font .ql-picker-label[data-value="georgia"]::before,
+.ql-picker.ql-font .ql-picker-item[data-value="georgia"]::before {
+  content: "Georgia";
+  font-family: 'Georgia', serif;
+}
+.ql-picker.ql-font .ql-picker-label[data-value="lucida"]::before,
+.ql-picker.ql-font .ql-picker-item[data-value="lucida"]::before {
+  content: "Lucida";
+  font-family: 'Lucida Sans Unicode', sans-serif;
+}
+.ql-picker.ql-font .ql-picker-label[data-value="roboto"]::before,
+.ql-picker.ql-font .ql-picker-item[data-value="roboto"]::before {
+  content: "Roboto";
+  font-family: 'Roboto', sans-serif;
+}
+
+/* ... (tus reglas anteriores: arial, courier, etc.) ... */
+
+/* 6. Fuente: Verdana */
+.ql-font-verdana {
+  font-family: 'Verdana', sans-serif;
+}
+/* 7. Fuente: Montserrat (Google Font) */
+.ql-font-montserrat {
+  font-family: 'Montserrat', sans-serif;
+}
+/* 8. Fuente: Playfair Display (Google Font) */
+.ql-font-playfair {
+  font-family: 'Playfair Display', serif;
+}
+
+/* --- Etiquetas para el menú desplegable --- */
+
+.ql-picker.ql-font .ql-picker-label[data-value="verdana"]::before,
+.ql-picker.ql-font .ql-picker-item[data-value="verdana"]::before {
+  content: "Verdana";
+  font-family: 'Verdana', sans-serif;
+}
+
+.ql-picker.ql-font .ql-picker-label[data-value="montserrat"]::before,
+.ql-picker.ql-font .ql-picker-item[data-value="montserrat"]::before {
+  content: "Montserrat";
+  font-family: 'Montserrat', sans-serif;
+}
+
+.ql-picker.ql-font .ql-picker-label[data-value="playfair"]::before,
+.ql-picker.ql-font .ql-picker-item[data-value="playfair"]::before {
+  content: "Playfair";
+  font-family: 'Playfair Display', serif;
+}
+
+/* ... tus otras fuentes ... */
+
+/* 9. Nueva Fuente: Playwrite */
+.ql-font-playwrite {
+  font-family: "Playwrite US Trad Guides", cursive;
+}
+
+/* Etiqueta para el menú desplegable */
+.ql-picker.ql-font .ql-picker-label[data-value="playwrite"]::before,
+.ql-picker.ql-font .ql-picker-item[data-value="playwrite"]::before {
+  content: "Playwrite"; /* El nombre que verás en el menú */
+  font-family: "Playwrite US Trad Guides", cursive;
 }
