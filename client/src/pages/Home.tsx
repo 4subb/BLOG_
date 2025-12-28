@@ -1,20 +1,26 @@
 import { useState, useEffect } from "react";
 import { type Post } from "@shared/schema";
 import { Link } from "wouter";
-import { motion } from "framer-motion"; // Importamos Motion
+import { motion } from "framer-motion";
 
 import Header from "@/components/Header";
-import InteractiveHero from "@/components/InteractiveHero"; // ¡Tu nuevo héroe!
+import InteractiveHero from "@/components/InteractiveHero";
 import SectionCard from "@/components/SectionCard";
 import RecentPostsSidebar from "@/components/RecentPostsSidebar";
 import Footer from "@/components/Footer";
 import ThemeToggle from "@/components/ThemeToggle";
 import PostCard from "@/components/PostCard";
 
-import heroImage from "@assets/stock_images/abstract_technology__0bba531a.jpg";
-import engineeringImage from "@assets/stock_images/modern_engineering_w_afeecc6f.jpg";
-import sportsImage from "@assets/stock_images/professional_cyclist_f2d23366.jpg";
-import travelImage from "@assets/stock_images/beautiful_landscape__1091a52c.jpg";
+// --- ELIMINA LAS IMPORTACIONES QUE DABAN ERROR ---
+// import heroImage from "@assets/stock_images/..."  <-- BORRAR ESTO
+// import engineeringImage from "@assets/stock_images/..." <-- BORRAR ESTO
+// ...
+
+// --- USA ESTAS URLs EN SU LUGAR (Imágenes reales y profesionales) ---
+const heroImage = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1920&auto=format&fit=crop";
+const engineeringImage = "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=800&auto=format&fit=crop";
+const sportsImage = "https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop";
+const travelImage = "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=800&auto=format&fit=crop";
 
 export default function Home() {
   const sections = [
