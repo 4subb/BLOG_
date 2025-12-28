@@ -25,12 +25,12 @@ export default function Sports() {
         setIsLoading(true);
         
         // 1. Posts de Noticias (SOLO DEPORTES)
-        const sportsRes = await fetch('http://localhost:5000/api/posts/categoria/deportes', { credentials: 'include' });
+        const sportsRes = await fetch('/api/posts/categoria/deportes', { credentials: 'include' });
         if (sportsRes.ok) setSportsPosts(await sportsRes.json());
         
         // 2. Calendario (Eventos de los 3 deportes)
         const sports = ['ciclismo', 'tenis', 'f1'];
-        const eventPromises = sports.map(s => fetch(`http://localhost:5000/api/public/events/${s}`).then(r => r.json()));
+        const eventPromises = sports.map(s => fetch(`/api/public/events/${s}`).then(r => r.json()));
         const results = await Promise.all(eventPromises);
         const combinedEvents = [...(results[0] || []), ...(results[1] || []), ...(results[2] || [])];
         setAllEvents(combinedEvents);

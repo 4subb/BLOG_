@@ -16,7 +16,7 @@ export default function Travel() {
       try {
         setIsLoading(true);
         // Llamamos a la API de la categoría 'viajes'
-        const response = await fetch('http://localhost:5000/api/posts/categoria/viajes', {
+        const response = await fetch('/api/posts/categoria/viajes', {
           credentials: 'include' 
         });
         

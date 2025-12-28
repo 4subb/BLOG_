@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/auth/me', { credentials: 'include'});
+        const response = await fetch('/api/auth/me', { credentials: 'include'});
 
         if (response.ok) {
           const data = await response.json();
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // 7. Esta función (logout) no cambia.
   const logout = async () => {
     try {
-      await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
     } finally {

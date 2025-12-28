@@ -16,7 +16,7 @@ export default function Engineering() {
     const fetchEngineeringPosts = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('http://localhost:5000/api/posts/categoria/ingenieria', {
+        const response = await fetch('/api/posts/categoria/ingenieria', {
           credentials: 'include' 
         });
         if (!response.ok) throw new Error('Error cargando posts');

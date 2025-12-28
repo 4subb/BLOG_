@@ -30,7 +30,7 @@ export default function Home() {
     const fetchAllPosts = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('http://localhost:5000/api/posts', { credentials: 'include' });
+        const response = await fetch('/api/posts', { credentials: 'include' });
         if (!response.ok) throw new Error('Error');
         setPosts(await response.json());
       } catch (error) { console.error(error); } 

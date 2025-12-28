@@ -37,7 +37,7 @@ export default function PostDetails() {
         // Hacemos scroll arriba al cambiar de post
         window.scrollTo(0, 0); 
         
-        const response = await fetch(`http://localhost:5000/api/posts/${postId}`, { credentials: 'include' });
+        const response = await fetch(`/api/posts/${postId}`, { credentials: 'include' });
         if (!response.ok) throw new Error("Error al cargar post");
         const result = await response.json();
         setData(result);
