@@ -24,7 +24,7 @@ export default function LikeButton({ postId }: LikeButtonProps) {
     const fetchLikes = async () => {
       try {
         // Nota: Si el usuario no está logueado, la API devuelve userLiked: false, lo cual es correcto
-        const res = await fetch(`http://localhost:5000/api/posts/${postId}/likes`, {
+        const res = await fetch(`/api/posts/${postId}/likes`, {
           credentials: 'include'
         });
         if (res.ok) {
@@ -61,7 +61,7 @@ export default function LikeButton({ postId }: LikeButtonProps) {
     setIsAnimating(true); // Activar animación
 
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}/like`, {
+      const res = await fetch(`/api/posts/${postId}/like`, {
         method: 'POST',
         credentials: 'include'
       });

@@ -26,8 +26,8 @@ export default function SportsTabs({ onDateSelect }: SportsTabsProps) {
     const fetchAllSportsData = async () => {
       try {
         const sports = ['ciclismo', 'tenis', 'f1'];
-        const rankingPromises = sports.map(s => fetch(`http://localhost:5000/api/public/rankings/${s}`).then(res => res.json()));
-        const eventPromises = sports.map(s => fetch(`http://localhost:5000/api/public/events/${s}`).then(res => res.json()));
+        const rankingPromises = sports.map(s => fetch(`/api/public/rankings/${s}`).then(res => res.json()));
+        const eventPromises = sports.map(s => fetch(`/api/public/events/${s}`).then(res => res.json()));
         const rankingsResults = await Promise.all(rankingPromises);
         const eventsResults = await Promise.all(eventPromises);
 

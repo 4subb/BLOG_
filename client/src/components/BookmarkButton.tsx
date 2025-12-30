@@ -10,7 +10,7 @@ export default function BookmarkButton({ postId }: { postId: string }) {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    fetch(`http://localhost:5000/api/posts/${postId}/bookmark`, { credentials: 'include' })
+    fetch(`/api/posts/${postId}/bookmark`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setIsSaved(data.isSaved))
       .catch(console.error);
@@ -22,7 +22,7 @@ export default function BookmarkButton({ postId }: { postId: string }) {
 
     setIsSaved(!isSaved); // Optimistic update
     try {
-      await fetch(`http://localhost:5000/api/posts/${postId}/bookmark`, { method: 'POST', credentials: 'include' });
+      await fetch(`/api/posts/${postId}/bookmark`, { method: 'POST', credentials: 'include' });
     } catch (error) { setIsSaved(!isSaved); } // Revertir si falla
   };
 

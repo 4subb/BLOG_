@@ -25,7 +25,7 @@ export default function CommentSection({ postId }: { postId: string }) {
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/comments/${postId}`);
+        const res = await fetch(`/api/comments/${postId}`);
         if (res.ok) {
           const data = await res.json();
           setComments(data);
@@ -43,7 +43,7 @@ export default function CommentSection({ postId }: { postId: string }) {
     if (!newComment.trim()) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch('http://localhost:5000/api/comments', {
+      const res = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', 
@@ -76,7 +76,7 @@ export default function CommentSection({ postId }: { postId: string }) {
 
     try {
       // Llamamos a la API de DELETE que creamos (¡y enviamos la cookie!)
-      const res = await fetch(`http://localhost:5000/api/comments/${commentId}`, {
+      const res = await fetch(`/api/comments/${commentId}`, {
         method: 'DELETE',
         credentials: 'include' 
       });
