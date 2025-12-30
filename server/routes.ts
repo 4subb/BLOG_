@@ -177,5 +177,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(posts);
   });
 
+
+  // --- RUTA DE DIAGNÓSTICO (BORRAR DESPUÉS) ---
+  app.get('/api/debug-session', (req, res) => {
+    res.json({
+      sessionID: req.sessionID,
+      userId: req.session.userId || "No hay ID",
+      email: req.session.email || "No hay Email",
+      role: req.session.role || "No hay Rol (undefined)", // <--- AQUÍ ESTÁ LA CLAVE
+      cookie: req.session.cookie
+    });
+  });
+
   return createServer(app);
 }
