@@ -5,32 +5,33 @@ import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import { pool } from './db';
 import { registerRoutes } from "./routes"; 
-import helmet from "helmet"; // 1. ¡NUEVO! Importamos seguridad
+import helmet from "helmet"; 
 
 const app = express();
 
-// 2. ¡NUEVO! Configuración de seguridad básica
-// Helmet configura automáticamente cabeceras HTTP seguras
+// 🚨 CORRECCIÓN CLAVE: Confiar en el Proxy de Render
+// Esto es OBLIGATORIO para que las cookies funcionen con HTTPS en la nube
+app.set("trust proxy", 1); 
+
+// Configuración de seguridad básica
 app.use(helmet({
-  contentSecurityPolicy: false, // Desactivamos CSP estricto por ahora para evitar problemas con imágenes externas/scripts de dev
+  contentSecurityPolicy: false, 
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// 3. Configuración CORS dinámica
-// Esto permite que funcione en localhost Y en tu dominio de producción automáticamente
+// Configuración CORS
+// Mantenemos localhost para desarrollo. En producción, al servir todo junto, esto no afecta.
 const allowedOrigins = ['http://localhost:5173']; 
-// Nota: Cuando tengas tu dominio (ej. https://miblog.onrender.com), agrégalo a esta lista si fuera necesario,
-// pero al servir frontend y backend desde el mismo sitio (como haremos), esto se maneja solo.
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Permitir peticiones sin origen (como apps móviles o curl) o si está en la lista
+    // Si no hay origen (como apps móviles) o está en la lista blanca (localhost), pasa.
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      // En producción, si el frontend y backend están en el mismo dominio, esto no suele ser problema
+      // Permitimos el resto porque es una app monolítica (frontend y backend juntos)
       callback(null, true); 
     }
   },
@@ -48,23 +49,23 @@ if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET must be set in .env file");
 }
 
-// 4. Configuración de Cookie segura para Producción
+// Configuración de Sesión
 app.use(session({
   store: store,
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 30 * 24 * 60 * 60 * 1000,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 días
     httpOnly: true,
-    // ¡IMPORTANTE! Secure: true solo si estamos en producción (https)
-    secure: app.get("env") === "production", 
-    // SameSite: lax es bueno para la mayoría de los sitios
+    // Secure: true solo si estamos en producción. 
+    // Gracias a 'trust proxy', esto ahora funcionará en Render.
+    secure: process.env.NODE_ENV === "production", 
     sameSite: "lax",
   }
 }));
 
-// --- LOGGING ---
+// --- LOGGING (Sin cambios) ---
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -100,10 +101,9 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    // En producción, no queremos enviar el stack trace del error al usuario
     res.status(status).json({ message });
     if (app.get("env") !== "test") {
-        console.error(err);
+      console.error(err);
     }
   });
 
