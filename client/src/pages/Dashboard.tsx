@@ -63,7 +63,7 @@ function DashboardPage() {
     const fetchUsers = async () => {
       try {
         setIsLoadingUsers(true);
-        const res = await fetch('http://localhost:5000/api/users', { credentials: 'include' });
+        const res = await fetch('/api/users', { credentials: 'include' });
         if (res.ok) setUsers(await res.json());
         else { const d = await res.json(); throw new Error(d.message); }
       } catch (err: any) { setUserMessage(err.message || "Error cargando usuarios."); } 
@@ -76,7 +76,7 @@ function DashboardPage() {
     const fetchPosts = async () => {
       try {
         setIsLoadingPosts(true);
-        const res = await fetch('http://localhost:5000/api/posts/admin', { credentials: 'include' });
+        const res = await fetch('/api/posts/admin', { credentials: 'include' });
         if (res.ok) setPosts(await res.json());
         else { const d = await res.json(); throw new Error(d.message); }
       } catch (err: any) { setPostMessage(err.message || "Error cargando posts."); }
@@ -92,7 +92,7 @@ function DashboardPage() {
     setPostMessage('Creando post...');
     const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
     try {
-      const response = await fetch('http://localhost:5000/api/posts', {
+      const response = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', 
@@ -126,7 +126,7 @@ function DashboardPage() {
   const handleRoleChange = async (userId: string, newRole: 'admin' | 'user') => {
     if (!window.confirm(`¿Seguro?`)) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
+      const res = await fetch(`/api/users/${userId}/role`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -140,7 +140,7 @@ function DashboardPage() {
   const handleDeleteUser = async (userId: string) => {
     if (!window.confirm("¿Seguro?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${userId}`, { method: 'DELETE', credentials: 'include' });
+      const res = await fetch(`/api/users/${userId}`, { method: 'DELETE', credentials: 'include' });
       if (res.ok) setUsers(prev => prev.filter(u => u.id !== userId));
       else setUserMessage(`Error al borrar usuario.`);
     } catch (err) { setUserMessage("Error de red."); }
@@ -149,7 +149,7 @@ function DashboardPage() {
   const handleTogglePublish = async (post: Post) => {
     const newStatus = !post.isPublished;
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${post.id}`, {
+      const res = await fetch(`/api/posts/${post.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -163,7 +163,7 @@ function DashboardPage() {
   const handleDeletePost = async (postId: string) => {
     if (!window.confirm("¿Borrar post?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}`, { method: 'DELETE', credentials: 'include' });
+      const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE', credentials: 'include' });
       if (res.ok) setPosts(prev => prev.filter(p => p.id !== postId));
       else setPostMessage("Error al borrar.");
     } catch (err) { setPostMessage("Error de red."); }

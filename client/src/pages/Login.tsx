@@ -27,7 +27,7 @@ function LoginPage() {
     // 2. USAMOS TRY...CATCH PARA MANEJAR ERRORES
     try {
       // 3. ESTA ES LA "LLAMADA API" (API CALL)
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST', // 4. El método: Estamos ENVIANDO datos
         headers: {
           // 5. Los "headers": Le decimos al backend qué tipo de datos enviamos

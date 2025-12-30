@@ -45,7 +45,7 @@ function EditPostPage() {
     if (!postId) return;
     const fetchPostData = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/posts/${postId}/admin`, { credentials: 'include' });
+        const res = await fetch(`/api/posts/${postId}/admin`, { credentials: 'include' });
         if (!res.ok) throw new Error("Error cargando post");
         const post: Post = await res.json();
         
@@ -68,7 +68,7 @@ function EditPostPage() {
     const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
 
     try {
-      const response = await fetch(`http://localhost:5000/api/posts/${postId}`, {
+      const response = await fetch(`/api/posts/${postId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', 
