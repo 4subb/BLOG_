@@ -36,11 +36,53 @@ const isAdmin = (req: Request, res: Response, next: NextFunction) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // --- 1. RUTAS PÚBLICAS DE POSTS ---
-  app.get('/api/posts', async (req, res) => {
-    const posts = await storage.getPosts();
+// --- 5. RUTAS DE ADMIN ---
+  app.get('/api/posts/admin', isAdmin, async (req, res) => {
+    const posts = await storage.getPostsAdmin();
     res.json(posts);
   });
+  app.get('/api/posts/:id/admin', isAdmin, async (req, res) => {
+    const post = await storage.getPostByIdAdmin(req.params.id);
+    if (!post) return res.status(404).json({ message: "No encontrado" });
+    res.json(post);
+  });
+  app.post('/api/posts', isAdmin, async (req, res) => {
+    const val = createPostSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    const post = await storage.createPost({ ...val.data, authorId: req.session.userId! });
+    res.status(201).json({ message: "Creado", post });
+  });
+  app.put('/api/posts/:id', isAdmin, async (req, res) => {
+    const val = createPostSchema.partial().safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    await storage.updatePost(req.params.id, val.data);
+    res.json({ message: "Actualizado" });
+  });
+  app.delete('/api/posts/:id', isAdmin, async (req, res) => {
+    await storage.deletePost(req.params.id);
+    res.json({ message: "Borrado" });
+  });
+  app.delete('/api/comments/:id', isAdmin, async (req, res) => {
+    await storage.deleteComment(req.params.id);
+    res.json({ message: "Borrado" });
+  });
+  app.get('/api/users', isAdmin, async (req, res) => {
+    const users = await storage.getUsers();
+    res.json(users);
+  });
+  app.put('/api/users/:id/role', isAdmin, async (req, res) => {
+    if (req.params.id === req.session.userId) return res.status(400).json({ message: "No puedes cambiar tu rol" });
+    await storage.updateUserRole(req.params.id, req.body.role);
+    res.json({ message: "Rol actualizado" });
+  });
+  app.delete('/api/users/:id', isAdmin, async (req, res) => {
+    if (req.params.id === req.session.userId) return res.status(400).json({ message: "No te puedes borrar" });
+    await storage.deleteUser(req.params.id);
+    res.json({ message: "Usuario borrado" });
+  });
+
+
+  // --- 1. RUTAS PÚBLICAS DE POSTS ---
   app.get('/api/posts/categoria/:category', async (req, res) => {
     const posts = await storage.getPostsByCategory(req.params.category);
     res.json(posts);
@@ -102,51 +144,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ isSaved });
   });
 
-  // --- 5. RUTAS DE ADMIN ---
-  app.get('/api/posts/admin', isAdmin, async (req, res) => {
-    const posts = await storage.getPostsAdmin();
-    res.json(posts);
-  });
-  app.get('/api/posts/:id/admin', isAdmin, async (req, res) => {
-    const post = await storage.getPostByIdAdmin(req.params.id);
-    if (!post) return res.status(404).json({ message: "No encontrado" });
-    res.json(post);
-  });
-  app.post('/api/posts', isAdmin, async (req, res) => {
-    const val = createPostSchema.safeParse(req.body);
-    if (!val.success) return res.status(400).json(val.error);
-    const post = await storage.createPost({ ...val.data, authorId: req.session.userId! });
-    res.status(201).json({ message: "Creado", post });
-  });
-  app.put('/api/posts/:id', isAdmin, async (req, res) => {
-    const val = createPostSchema.partial().safeParse(req.body);
-    if (!val.success) return res.status(400).json(val.error);
-    await storage.updatePost(req.params.id, val.data);
-    res.json({ message: "Actualizado" });
-  });
-  app.delete('/api/posts/:id', isAdmin, async (req, res) => {
-    await storage.deletePost(req.params.id);
-    res.json({ message: "Borrado" });
-  });
-  app.delete('/api/comments/:id', isAdmin, async (req, res) => {
-    await storage.deleteComment(req.params.id);
-    res.json({ message: "Borrado" });
-  });
-  app.get('/api/users', isAdmin, async (req, res) => {
-    const users = await storage.getUsers();
-    res.json(users);
-  });
-  app.put('/api/users/:id/role', isAdmin, async (req, res) => {
-    if (req.params.id === req.session.userId) return res.status(400).json({ message: "No puedes cambiar tu rol" });
-    await storage.updateUserRole(req.params.id, req.body.role);
-    res.json({ message: "Rol actualizado" });
-  });
-  app.delete('/api/users/:id', isAdmin, async (req, res) => {
-    if (req.params.id === req.session.userId) return res.status(400).json({ message: "No te puedes borrar" });
-    await storage.deleteUser(req.params.id);
-    res.json({ message: "Usuario borrado" });
-  });
-
   // --- 6. RUTAS DE AUTH ---
   app.post('/api/auth/register', async (req, res) => {
     const val = registerSchema.safeParse(req.body);
@@ -172,6 +169,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/me', (req, res) => {
     if (!req.session.userId) return res.status(401).json({ user: null });
     res.json({ user: { id: req.session.userId, email: req.session.email, role: req.session.role } });
+  });
+
+// 6. La ruta raíz de posts
+  app.get('/api/posts', async (req, res) => {
+    const posts = await storage.getPosts();
+    res.json(posts);
   });
 
   return createServer(app);
