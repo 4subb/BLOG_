@@ -416,3 +416,23 @@
   content: "Playwrite"; /* El nombre que verás en el menú */
   font-family: "Playwrite US Trad Guides", cursive;
 }
+
+/* Animación del Avión */
+@keyframes flyAway {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  20% {
+    transform: translate(-10px, 10px) scale(0.8); /* Retrocede un poco para impulsarse */
+  }
+  100% {
+    transform: translate(300px, -300px) scale(0); /* Sale disparado arriba a la derecha */
+    opacity: 0;
+  }
+}
+
+.animate-fly {
+  animation: flyAway 0.8s ease-in-out forwards;
+}
+

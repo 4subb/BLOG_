@@ -1,6 +1,7 @@
 // Contenido NUEVO para client/src/main.tsx
 
 import React from "react"; // 1. Importamos React (para el StrictMode)
+import './i18n'; // <-- Agrega esta línea
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";

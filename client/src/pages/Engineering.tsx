@@ -7,10 +7,12 @@ import RecentPostsSidebar from "@/components/RecentPostsSidebar";
 import Footer from "@/components/Footer";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Code2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function Engineering() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchEngineeringPosts = async () => {
@@ -58,8 +60,8 @@ export default function Engineering() {
                 <Code2 className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h1 className="text-4xl md:text-5xl font-heading font-bold">Ingeniería</h1>
-                <p className="text-muted-foreground mt-2">Proyectos, código y documentación técnica</p>
+                <h1 className="text-4xl md:text-5xl font-heading font-bold">{t('pages.engTitle')}</h1>
+                <p className="text-muted-foreground mt-2">{t('pages.engSubtitle')}</p>
               </div>
             </div>
           </div>

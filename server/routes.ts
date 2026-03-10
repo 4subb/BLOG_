@@ -3,30 +3,31 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage"; 
 import bcrypt from 'bcrypt';         
 import { z } from 'zod';            
-import { postCategoryEnum, insertCommentSchema, comments, sportCategoryEnum } from '@shared/schema';
-import { db } from './db'; 
-import { eq } from 'drizzle-orm'; 
-import { mockRankings, mockEvents } from './mockData';
+import { postCategoryEnum, insertPostSchema, insertCommentSchema, sportCategoryEnum } from '@shared/schema';
 
-type SportCategory = (typeof sportCategoryEnum.enumValues)[number];
+const loginSchema = z.object({ email: z.string().email(), password: z.string().min(8) });
 
-// Validaciones
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8)
+// 1. CORRECCIÓN: Agregamos 'username' opcional al esquema de validación
+const registerSchema = z.object({ 
+  email: z.string().email(), 
+  password: z.string().min(8),
+  username: z.string().min(3).optional()
 });
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8)
+
+// Validación de deportes
+const createRankingSchema = z.object({
+  sport: z.enum(sportCategoryEnum.enumValues),
+  rankingName: z.string().min(3),
+  rank: z.coerce.number().int().positive(),
+  athleteName: z.string().min(3),
+  teamName: z.string().optional().nullable(),
+  points: z.coerce.number().int().optional().nullable(),
 });
-const createPostSchema = z.object({
-  title: z.string().min(3),
-  content: z.string().min(10),
-  category: z.enum(postCategoryEnum.enumValues),
-  imageUrl: z.string().url().nullable().optional(),
-  country: z.string().nullable().optional(),
-  tags: z.array(z.string()).nullable().optional(),
-  isPublished: z.boolean().optional(),
+const createEventSchema = z.object({
+  sport: z.enum(sportCategoryEnum.enumValues),
+  eventName: z.string().min(3),
+  eventDate: z.coerce.date(), 
+  location: z.string().optional().nullable(),
 });
 
 const isAdmin = (req: Request, res: Response, next: NextFunction) => {
@@ -36,40 +37,30 @@ const isAdmin = (req: Request, res: Response, next: NextFunction) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-// --- 5. RUTAS DE ADMIN ---
-  app.get('/api/posts/admin', isAdmin, async (req, res) => {
-    const posts = await storage.getPostsAdmin();
-    res.json(posts);
-  });
-  app.get('/api/posts/:id/admin', isAdmin, async (req, res) => {
-    const post = await storage.getPostByIdAdmin(req.params.id);
-    if (!post) return res.status(404).json({ message: "No encontrado" });
-    res.json(post);
-  });
+  // --- Admin Blog ---
+  app.get('/api/posts/admin', isAdmin, async (req, res) => { res.json(await storage.getPostsAdmin()); });
+  app.get('/api/posts/:id/admin', isAdmin, async (req, res) => { res.json(await storage.getPostByIdAdmin(req.params.id) || { message: "No encontrado" }); });
+  
   app.post('/api/posts', isAdmin, async (req, res) => {
-    const val = createPostSchema.safeParse(req.body);
+    const val = insertPostSchema.safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
-    const post = await storage.createPost({ ...val.data, authorId: req.session.userId! });
+    
+    const post = await storage.createPost({ 
+      ...val.data, 
+      authorId: req.session.userId! 
+    });
     res.status(201).json({ message: "Creado", post });
   });
+
   app.put('/api/posts/:id', isAdmin, async (req, res) => {
-    const val = createPostSchema.partial().safeParse(req.body);
+    const val = insertPostSchema.partial().safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
     await storage.updatePost(req.params.id, val.data);
     res.json({ message: "Actualizado" });
   });
-  app.delete('/api/posts/:id', isAdmin, async (req, res) => {
-    await storage.deletePost(req.params.id);
-    res.json({ message: "Borrado" });
-  });
-  app.delete('/api/comments/:id', isAdmin, async (req, res) => {
-    await storage.deleteComment(req.params.id);
-    res.json({ message: "Borrado" });
-  });
-  app.get('/api/users', isAdmin, async (req, res) => {
-    const users = await storage.getUsers();
-    res.json(users);
-  });
+  app.delete('/api/posts/:id', isAdmin, async (req, res) => { await storage.deletePost(req.params.id); res.json({ message: "Borrado" }); });
+  app.delete('/api/comments/:id', isAdmin, async (req, res) => { await storage.deleteComment(req.params.id); res.json({ message: "Borrado" }); });
+  app.get('/api/users', isAdmin, async (req, res) => { res.json(await storage.getUsers()); });
   app.put('/api/users/:id/role', isAdmin, async (req, res) => {
     if (req.params.id === req.session.userId) return res.status(400).json({ message: "No puedes cambiar tu rol" });
     await storage.updateUserRole(req.params.id, req.body.role);
@@ -78,115 +69,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/users/:id', isAdmin, async (req, res) => {
     if (req.params.id === req.session.userId) return res.status(400).json({ message: "No te puedes borrar" });
     await storage.deleteUser(req.params.id);
-    res.json({ message: "Usuario borrado" });
+    res.json({ message: "Borrado" });
   });
 
-
-  // --- 1. RUTAS PÚBLICAS DE POSTS ---
-  app.get('/api/posts/categoria/:category', async (req, res) => {
-    const posts = await storage.getPostsByCategory(req.params.category);
-    res.json(posts);
+  // --- Perfil Usuario ---
+  app.patch('/api/users/profile', async (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ message: "No autorizado" });
+    try {
+      const updatedUser = await storage.updateUser(req.session.userId, req.body);
+      req.session.email = updatedUser.email;
+      res.json(updatedUser);
+    } catch { res.status(500).json({ message: "Error" }); }
   });
+  app.get('/api/users/me/bookmarks', async (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ message: "No autorizado" });
+    res.json(await storage.getUserBookmarks(req.session.userId));
+  });
+
+  // --- Admin Deportes ---
+  app.post('/api/admin/rankings', isAdmin, async (req, res) => {
+    const val = createRankingSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    res.status(201).json(await storage.createRanking(val.data));
+  });
+  app.delete('/api/admin/rankings/:id', isAdmin, async (req, res) => { await storage.deleteRanking(req.params.id); res.json({ message: "Borrado" }); });
+  app.post('/api/admin/events', isAdmin, async (req, res) => {
+    const val = createEventSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    res.status(201).json(await storage.createEvent(val.data));
+  });
+  app.delete('/api/admin/events/:id', isAdmin, async (req, res) => { await storage.deleteEvent(req.params.id); res.json({ message: "Borrado" }); });
+
+  // --- Públicas Blog ---
+  app.get('/api/posts', async (req, res) => { res.json(await storage.getPosts()); });
+  app.get('/api/posts/categoria/:category', async (req, res) => { res.json(await storage.getPostsByCategory(req.params.category)); });
   app.get('/api/posts/:id', async (req, res) => {
     try {
       const result = await storage.getPostById(req.params.id);
       if (!result) return res.status(404).json({ message: "No encontrado" });
-      res.json(result); // Devuelve { current, prev, next }
-    } catch (e) { res.status(500).json({ message: "Error" }); }
+      res.json(result);
+    } catch { res.status(500).json({ message: "Error" }); }
   });
 
-  // --- 2. RUTAS DE INTERACCIÓN ---
-  app.get('/api/comments/:postId', async (req, res) => {
-    const comments = await storage.getCommentsByPostId(req.params.postId);
-    res.json(comments);
+  // --- Públicas Deportes ---
+  app.get('/api/public/rankings/:sport', async (req, res) => {
+    try { res.json(await storage.getRankings(req.params.sport)); } catch { res.status(500).json({ message: "Error" }); }
   });
+  app.get('/api/public/events/:sport', async (req, res) => {
+    try { res.json(await storage.getEvents(req.params.sport)); } catch { res.status(500).json({ message: "Error" }); }
+  });
+
+  // --- Interacción ---
+  app.get('/api/comments/:postId', async (req, res) => { res.json(await storage.getCommentsByPostId(req.params.postId)); });
   app.get('/api/posts/:id/likes', async (req, res) => {
-    try {
-      const count = await storage.getPostLikes(req.params.id);
-      let userLiked = false;
-      if (req.session.userId) userLiked = await storage.hasUserLiked(req.session.userId, req.params.id);
-      res.json({ count, userLiked });
-    } catch (e) { res.status(500).json({ message: "Error" }); }
+    const count = await storage.getPostLikes(req.params.id);
+    const userLiked = req.session.userId ? await storage.hasUserLiked(req.session.userId, req.params.id) : false;
+    res.json({ count, userLiked });
   });
   app.get('/api/posts/:id/bookmark', async (req, res) => {
-    if (!req.session.userId) return res.json({ isSaved: false });
-    const isSaved = await storage.hasUserSavedPost(req.session.userId, req.params.id);
+    const isSaved = req.session.userId ? await storage.hasUserSavedPost(req.session.userId, req.params.id) : false;
     res.json({ isSaved });
   });
 
-  // --- 3. RUTAS DE DEPORTES (MOCK) ---
-  app.get('/api/public/rankings/:sport', (req, res) => {
-    const sport = req.params.sport as SportCategory;
-    res.json(mockRankings[sport] || []);
-  });
-  app.get('/api/public/events/:sport', (req, res) => {
-    const sport = req.params.sport as SportCategory;
-    res.json(mockEvents[sport] || []);
-  });
-
-  // --- 4. RUTAS PROTEGIDAS (Login) ---
+  // --- Rutas Protegidas ---
   app.post('/api/comments', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ message: "Login requerido" });
     const val = insertCommentSchema.omit({ userId: true }).safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
-    const comment = await storage.createComment({ ...val.data, userId: req.session.userId });
-    res.status(201).json(comment);
+    res.json(await storage.createComment({ ...val.data, userId: req.session.userId }));
   });
   app.post('/api/posts/:id/like', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ message: "Login requerido" });
     const isLiked = await storage.toggleLike(req.session.userId, req.params.id);
-    const newCount = await storage.getPostLikes(req.params.id);
-    res.json({ isLiked, newCount });
+    res.json({ isLiked, newCount: await storage.getPostLikes(req.params.id) });
   });
   app.post('/api/posts/:id/bookmark', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ message: "Login requerido" });
-    const isSaved = await storage.toggleSavedPost(req.session.userId, req.params.id);
-    res.json({ isSaved });
+    res.json({ isSaved: await storage.toggleSavedPost(req.session.userId, req.params.id) });
   });
 
-  // --- 6. RUTAS DE AUTH ---
+  // --- Auth ---
   app.post('/api/auth/register', async (req, res) => {
     const val = registerSchema.safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
-    if (await storage.getUserByEmail(val.data.email)) return res.status(409).json({ message: "Email existe" });
+    
+    if (await storage.getUserByEmail(val.data.email)) return res.status(409).json({ message: "Existe" });
+    
     const password_hash = await bcrypt.hash(val.data.password, 10);
-    const user = await storage.createUser({ email: val.data.email, password_hash });
-    res.status(201).json({ user });
+    
+    // 2. CORRECCIÓN: Guardamos username y creamos el usuario
+    const newUser = await storage.createUser({ 
+      email: val.data.email, 
+      password_hash,
+      username: val.data.username // <--- Se guarda el nombre
+    });
+
+    // 3. CORRECCIÓN: AUTO-LOGIN (Establecer sesión inmediatamente)
+    req.session.userId = newUser.id;
+    req.session.email = newUser.email;
+    req.session.role = newUser.role;
+
+    // Devolvemos el usuario completo
+    res.status(201).json({ user: newUser });
   });
+
   app.post('/api/auth/login', async (req, res) => {
     const val = loginSchema.safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
     const user = await storage.getUserByEmail(val.data.email);
-    if (!user || !(await bcrypt.compare(val.data.password, user.password_hash))) return res.status(401).json({ message: "Credenciales inválidas" });
-    req.session.userId = user.id;
-    req.session.email = user.email;
-    req.session.role = user.role;
-    res.json({ message: "Login exitoso", user });
+    if (!user || !(await bcrypt.compare(val.data.password, user.password_hash))) return res.status(401).json({ message: "Error" });
+    req.session.userId = user.id; req.session.email = user.email; req.session.role = user.role;
+    res.json({ message: "Login", user });
   });
-  app.post('/api/auth/logout', (req, res) => {
-    req.session.destroy(() => res.json({ message: "Sesión cerrada" }));
-  });
-  app.get('/api/auth/me', (req, res) => {
+  app.post('/api/auth/logout', (req, res) => { req.session.destroy(() => res.json({ message: "Cerrado" })); });
+  app.get('/api/auth/me', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ user: null });
-    res.json({ user: { id: req.session.userId, email: req.session.email, role: req.session.role } });
-  });
-
-// 6. La ruta raíz de posts
-  app.get('/api/posts', async (req, res) => {
-    const posts = await storage.getPosts();
-    res.json(posts);
-  });
-
-
-  // --- RUTA DE DIAGNÓSTICO (BORRAR DESPUÉS) ---
-  app.get('/api/debug-session', (req, res) => {
-    res.json({
-      sessionID: req.sessionID,
-      userId: req.session.userId || "No hay ID",
-      email: req.session.email || "No hay Email",
-      role: req.session.role || "No hay Rol (undefined)", // <--- AQUÍ ESTÁ LA CLAVE
-      cookie: req.session.cookie
-    });
+    const user = await storage.getUserById(req.session.userId);
+    res.json({ user });
   });
 
   return createServer(app);

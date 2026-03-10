@@ -1,91 +1,204 @@
-// Contenido para client/src/pages/Register.tsx
-
+import { Link } from "wouter";
+import { useAuth } from '../context/AuthContext';
 import React, { useState } from 'react';
-import { useLocation } from "wouter"; // Importamos el hook de redirección
+import { Eye, EyeOff, AlertCircle } from "lucide-react"; // Icono de alerta
+import { cn } from "@/lib/utils"; // Utilidad de Tailwind para mezclar clases
 
 function RegisterPage() {
-  // Estados para el email y la contraseña
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [location, setLocation] = useLocation(); // Hook para redirigir
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Manejador del formulario
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // ESTADOS DE ERROR ESPECÍFICOS
+  const [errors, setErrors] = useState<{
+    email?: string;
+    password?: string;
+    confirm?: string;
+    general?: string;
+  }>({});
+
+  const { register, isLoading } = useAuth();
+
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const handleSubmit = async (evento: React.FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    setErrors({}); // Limpiar errores previos
 
-    // Validación simple (en un proyecto real sería más robusta)
-    if (!email || !password) {
-      alert('Por favor, completa todos los campos.');
+    let newErrors: any = {};
+    let hasError = false;
+
+    // 1. Validaciones Locales
+    if (!isValidEmail(email)) {
+      newErrors.email = "El formato del correo no es válido.";
+      hasError = true;
+    }
+    if (password.length < 6) {
+      newErrors.password = "Mínimo 6 caracteres.";
+      hasError = true;
+    }
+    if (password !== confirmPassword) {
+      newErrors.confirm = "Las contraseñas no coinciden.";
+      hasError = true;
+    }
+
+    if (hasError) {
+      setErrors(newErrors);
       return;
     }
 
-    console.log('Enviando datos de registro al backend...');
-
+    // 2. Envío al Backend
     try {
-      // ¡NUEVA RUTA DE API!
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          password: password // Enviamos la contraseña en texto plano (el backend la cifrará)
-        }),
-
-        credentials: 'include'
-
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // ¡Éxito!
-        console.log('Respuesta del servidor (éxito):', data);
-        alert('¡Registro exitoso! Ahora puedes iniciar sesión.');
-        setLocation('/login'); // Redirigimos al usuario a la página de login
+      await register({ email, password, username });
+    } catch (error: any) {
+      // Manejo inteligente de errores del servidor
+      const msg = error.message || "";
+      
+      if (msg.includes("ya está registrado") || msg.includes("Existe") || msg.includes("duplicate")) {
+        setErrors({ 
+          email: "duplicate" // Marca especial para mostrar el link de login
+        });
       } else {
-        // Error (ej. "el email ya existe")
-        console.log('Respuesta del servidor (error):', data);
-        alert(`Error en el registro: ${data.message}`);
+        setErrors({ general: "Error al registrar: " + msg });
       }
-
-    } catch (error) {
-      console.error('Error de red o al conectar con el servidor:', error);
-      alert('No se pudo conectar con el servidor. ¿Está funcionando?');
     }
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '400px', margin: '0 auto' }}>
-      <h1>Página de Registro</h1>
-
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label htmlFor="email">Email</label>
-          <input 
-            type="email" 
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
+        
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-900">Crear Cuenta</h2>
+          <p className="mt-2 text-sm text-gray-600">Únete a nuestra comunidad</p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label htmlFor="password">Contraseña</label>
-          <input 
-            type="password" 
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+        {/* Error General (si falla el servidor por otra cosa) */}
+        {errors.general && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" /> {errors.general}
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            
+            {/* USUARIO */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
+              <input 
+                type="text" 
+                required 
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-black focus:border-black"
+                placeholder="Ej. JuanDev"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+
+            {/* EMAIL CON MANEJO DE ERROR INTELIGENTE */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <input 
+                type="email" 
+                required 
+                // Si hay error, borde rojo y texto rojo
+                className={cn(
+                  "mt-1 block w-full px-3 py-2 border rounded-md focus:ring-black focus:border-black transition-colors",
+                  errors.email ? "border-red-500 bg-red-50 text-red-900 placeholder:text-red-300" : "border-gray-300"
+                )}
+                placeholder="tu@email.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setErrors({...errors, email: undefined}); // Limpiar error al escribir
+                }}
+              />
+              
+              {/* MENSAJE DE ERROR PERSONALIZADO */}
+              {errors.email === "duplicate" ? (
+                <p className="mt-2 text-sm text-red-600 flex items-center gap-1 animate-in slide-in-from-left-2">
+                   <AlertCircle className="w-4 h-4" />
+                   Este correo ya existe. 
+                   <Link href="/login" className="font-bold underline ml-1 hover:text-red-800">
+                     ¿Deseas iniciar sesión?
+                   </Link>
+                </p>
+              ) : errors.email && (
+                <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+              )}
+            </div>
+
+            {/* CONTRASEÑA */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Contraseña</label>
+              <div className="relative mt-1">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  className={cn(
+                    "block w-full px-3 py-2 border rounded-md pr-10 focus:ring-black focus:border-black",
+                    errors.password ? "border-red-500 bg-red-50" : "border-gray-300"
+                  )}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setErrors({...errors, password: undefined});
+                  }}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
+            </div>
+
+            {/* CONFIRMAR */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Confirmar Contraseña</label>
+              <div className="relative mt-1">
+                <input 
+                  type={showConfirm ? "text" : "password"} 
+                  required 
+                  className={cn(
+                    "block w-full px-3 py-2 border rounded-md pr-10 focus:ring-black focus:border-black",
+                    errors.confirm ? "border-red-500 bg-red-50" : "border-gray-300"
+                  )}
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setErrors({...errors, confirm: undefined});
+                  }}
+                />
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                  {showConfirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.confirm && <p className="mt-1 text-sm text-red-500">{errors.confirm}</p>}
+            </div>
+
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+          >
+            {isLoading ? "Creando cuenta..." : "Registrarse"}
+          </button>
+        </form>
+
+        <div className="text-center text-sm">
+          <p className="text-gray-600">
+            ¿Ya tienes cuenta? <Link href="/login" className="font-medium text-black hover:underline">Inicia Sesión aquí</Link>
+          </p>
         </div>
 
-        <button type="submit" style={{ padding: '0.5rem', background: '#28a745', color: 'white', border: 'none', cursor: 'pointer' }}>
-          Crear Cuenta
-        </button>
-      </form>
+      </div>
     </div>
   );
 }

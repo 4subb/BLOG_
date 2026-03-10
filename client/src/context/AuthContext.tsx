@@ -1,99 +1,113 @@
-// Contenido NUEVO (actualizado) para client/src/context/AuthContext.tsx
+import { createContext, useContext, ReactNode, useState, useEffect } from "react";
+// 👇 AQUÍ ESTÁ LA MAGIA: Importamos 'User' desde el archivo que acabas de actualizar arriba
+import { type User } from "@shared/schema"; 
+import { useLocation } from "wouter";
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
-
-// 1. (ACTUALIZADO) Definimos la "forma" del usuario para incluir el 'role'
-interface User {
-  id: string;
-  email: string;
-  role: 'admin' | 'user'; // <-- ¡NUEVO!
-}
-
-// 2. (ACTUALIZADO) Definimos la "forma" de nuestro Contexto
-interface IAuthContext {
-  user: User | null;
-  isAuthenticated: boolean;
+type AuthContextType = {
+  user: User | null; // Ahora 'User' ya incluye username y avatarUrl
   isLoading: boolean;
-  isAdmin: boolean; // <-- ¡NUEVO! Un atajo para saber si el usuario es admin
-  login: (userData: User) => void;
+  error: Error | null;
+  login: (data: any) => Promise<void>;
   logout: () => Promise<void>;
-}
+  register: (data: any) => Promise<void>;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+};
 
-// 3. (ACTUALIZADO) Creamos el Contexto con los nuevos valores por defecto
-const AuthContext = createContext<IAuthContext>({
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  isAdmin: false, // <-- ¡NUEVO!
-  login: () => {},
-  logout: async () => {},
-});
+const AuthContext = createContext<AuthContextType | null>(null);
 
-// 4. Creamos el "Proveedor" (El "Guardia" de nuestra App)
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // El tipo <User | null> ahora incluye el 'role' gracias al cambio de la Interfaz 1
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [, setLocation] = useLocation();
 
-  // 5. Esta función (useEffect) ¡YA FUNCIONA!
-  // Como llama a /api/auth/me y guarda la respuesta (data.user),
-  // y esa respuesta AHORA incluye el 'role', el 'user' en nuestro
-  // estado automáticamente tendrá el 'role'. ¡No hay que cambiar nada aquí!
   useEffect(() => {
-    const checkAuthStatus = async () => {
+    const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/me', { credentials: 'include'});
-
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data.user); // data.user (que viene del backend) ya tiene el 'role'
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
         } else {
           setUser(null);
         }
-      } catch (error) {
-        console.error("Error al comprobar la sesión:", error);
+      } catch (err) {
+        console.error("Error checking auth:", err);
         setUser(null);
       } finally {
         setIsLoading(false);
       }
     };
-
-    checkAuthStatus();
+    checkAuth();
   }, []);
 
-  // 6. Esta función (login) ¡TAMBIÉN YA FUNCIONA!
-  // LoginPage le pasa el 'data.user' (que viene del backend)
-  // y ese 'data.user' ya incluye el 'role'.
-  const login = (userData: User) => {
-    setUser(userData);
-  };
-
-  // 7. Esta función (logout) no cambia.
-  const logout = async () => {
+  const login = async (credentials: any) => {
+    setIsLoading(true);
+    setError(null);
     try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Error al iniciar sesión");
+      setUser(data.user);
+      setLocation("/");
+    } catch (err: any) {
+      setError(err);
+      throw err;
     } finally {
-      setUser(null);
+      setIsLoading(false);
     }
   };
 
-  // 8. (ACTUALIZADO) El "Valor" que compartiremos con toda la app
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    isAdmin: user?.role === 'admin', // <-- ¡NUEVO! El atajo de Admin
-    login,
-    logout
+  const register = async (credentials: any) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Error al registrarse");
+      setUser(data.user);
+      setLocation("/");
+    } catch (err: any) {
+      setError(err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // 9. Devolvemos el "Proveedor"
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setUser(null);
+      setLocation("/login");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isAdmin = user?.role === 'admin';
+
+  return (
+    <AuthContext.Provider value={{ user, isLoading, error, login, logout, register, isAuthenticated: !!user, isAdmin }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-// 10. (Sin cambios) Nuestro Hook personalizado
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth debe ser usado dentro de un AuthProvider");
+  return context;
 }

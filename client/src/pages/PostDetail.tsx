@@ -1,17 +1,18 @@
 import { useState, useEffect } from "react";
-import { useRoute, Link } from "wouter";
+import { useRoute } from "wouter";
 import { type Post } from "@shared/schema";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Send} from "lucide-react"; // Importamos flechas
+// 1. CAMBIO: Quitamos Send, agregamos Share2 y Check
+import { Calendar, MapPin, Share2, Check, Send } from "lucide-react"; 
 import { Button } from "@/components/ui/button";
 import LikeButton from "@/components/LikeButton";
 import BookmarkButton from "@/components/BookmarkButton";
 import CommentSection from "@/components/CommentSection";
 import ThemeToggle from "@/components/ThemeToggle";
 import DOMPurify from 'dompurify';
-import NavButton from "@/components/NavButton"; // <-- ¡Importar esto!
+import NavButton from "@/components/NavButton";
 
 // Tipo para la respuesta de la API
 type PostData = {
@@ -24,9 +25,13 @@ export default function PostDetails() {
   const [, params] = useRoute("/post/:id");
   const postId = params?.id;
 
-  const [data, setData] = useState<PostData | null>(null); // Guardamos todo el paquete
+  const [data, setData] = useState<PostData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  // 2. CAMBIO: Estados para la animación del avión
+  const [isFlying, setIsFlying] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!postId) return;
@@ -34,8 +39,7 @@ export default function PostDetails() {
       try {
         setIsLoading(true);
         setError(false);
-        // Hacemos scroll arriba al cambiar de post
-        window.scrollTo(0, 0); 
+        window.scrollTo(0, 0);
         
         const response = await fetch(`/api/posts/${postId}`, { credentials: 'include' });
         if (!response.ok) throw new Error("Error al cargar post");
@@ -49,11 +53,24 @@ export default function PostDetails() {
       }
     };
     fetchPost();
-  }, [postId]); // Se ejecuta cada vez que el ID cambia (al navegar)
+  }, [postId]);
 
+  // 3. CAMBIO: Lógica del Avión de Papel ✈️
   const handleShare = () => {
+    // Activa la clase CSS que hace volar el icono
+    setIsFlying(true);
+    
+    // Copia al portapapeles
     navigator.clipboard.writeText(window.location.href);
-    alert("¡Enlace copiado!");
+
+    // Secuencia de tiempos para la animación
+    setTimeout(() => {
+      setIsFlying(false); // Resetea el avión
+      setCopied(true);    // Muestra el Check verde
+      
+      // Quita el Check después de 2 segundos
+      setTimeout(() => setCopied(false), 2000);
+    }, 800); // 800ms dura la animación de vuelo
   };
 
   if (isLoading) return <div className="min-h-screen flex flex-col"><Header /><main className="flex-1 flex items-center justify-center py-20"><div className="text-lg text-muted-foreground animate-pulse">Cargando...</div></main><Footer /></div>;
@@ -86,10 +103,28 @@ export default function PostDetails() {
               <div className="flex items-center text-sm text-muted-foreground"><Calendar className="h-4 w-4 mr-2 opacity-70" /> <span>{formattedDate}</span></div>
               {post.country && <div className="flex items-center text-sm text-muted-foreground"><MapPin className="h-4 w-4 mr-2 opacity-70" /> <span>{post.country}</span></div>}
             </div>
+            
             <div className="flex items-center gap-2">
               <LikeButton postId={post.id} />
               <BookmarkButton postId={post.id} />
-              <Button variant="ghost" size="icon" onClick={handleShare}><Send className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors rotate-15" /></Button>
+              
+              {/* 4. CAMBIO: Botón con la lógica visual del avión */}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleShare}
+                className="relative overflow-hidden" // Importante para ocultar el avión cuando sale del botón
+                title="Compartir"
+              >
+                {copied ? (
+                  <Check className="h-5 w-5 text-green-500 animate-in zoom-in duration-300" />
+                ) : (
+                  <Send 
+                    className={`h-5 w-5 text-muted-foreground hover:text-primary transition-all duration-700 ${isFlying ? "animate-fly text-primary" : ""}`} 
+                  />
+                )}
+              </Button>
+
             </div>
           </div>
 
@@ -106,10 +141,9 @@ export default function PostDetails() {
             </div>
           )}
 
-          {/* --- NAVEGACIÓN ANTERIOR / SIGUIENTE (CON IMAGEN Y FILTRO) --- */}
+          {/* --- NAVEGACIÓN ANTERIOR / SIGUIENTE --- */}
           <div className="mt-16 pt-12 border-t border-border">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Usamos el componente NavButton para ambas direcciones */}
               <NavButton post={prev} direction="prev" />
               <NavButton post={next} direction="next" />
             </div>

@@ -1,137 +1,92 @@
-// 1. IMPORTAMOS 'useState'
-import { useLocation, Link } from "wouter";
+import { Link } from "wouter"; // Importante: Link de wouter
 import { useAuth } from '../context/AuthContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Eye, EyeOff } from "lucide-react";
 
-// Esta es tu página: una función que devuelve HTML (JSX)
 function LoginPage() {
-  
-  // 2. CREAMOS EL "ESTADO" (La memoria del componente)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // Tu 'useLocation' para redirigir
-  const [location, setLocation] = useLocation();
-// 2. AÑADE ESTA LÍNEA (Obtén la función 'login' del contexto)
-  const { login, isAuthenticated, isAdmin } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const { login, isLoading } = useAuth();
 
-  // 3. CREAMOS LA FUNCIÓN "MANEJADORA" (Handler)
-  // 1. MARCAMOS LA FUNCIÓN COMO "ASYNC" (ASÍNCRONA)
   const handleSubmit = async (evento: React.FormEvent<HTMLFormElement>) => {
-    // Evita que la página se recargue
-    evento.preventDefault(); 
-    
-    console.log('Enviando datos al backend...');
-    console.log('Email:', email);
-    console.log('Password:', password);
-
-    // 2. USAMOS TRY...CATCH PARA MANEJAR ERRORES
+    evento.preventDefault();
     try {
-      // 3. ESTA ES LA "LLAMADA API" (API CALL)
-      const response = await fetch('/api/auth/login', {
-        method: 'POST', // 4. El método: Estamos ENVIANDO datos
-        headers: {
-          // 5. Los "headers": Le decimos al backend qué tipo de datos enviamos
-          'Content-Type': 'application/json',
-        },
-        // 6. El "body": Los datos en sí, convertidos a texto JSON
-        body: JSON.stringify({ 
-          email: email, 
-          password: password 
-        }),
-
-        credentials: 'include'
-
-      });
-
-      // 7. MANEJAMOS LA RESPUESTA DEL SERVIDOR
-      // ...
-      if (response.ok) {
-        // Si el login fue exitoso
-        const data = await response.json();
-        console.log('Respuesta del servidor (éxito):', data);
-        
-        // 3. ¡AQUÍ ESTÁ LA MAGIA!
-        // Informamos al "Estado Global" sobre el nuevo usuario
-        login(data.user); 
-
-      } else {
-        // Si el login falló (ej. contraseña incorrecta)
-        const errorData = await response.json();
-        console.log('Respuesta del servidor (error):', errorData);
-        alert(`Error al iniciar sesión: ${errorData.message}`);
-      }
-
-    } catch (error) {
-      // 8. MANEJAMOS ERRORES DE RED
-      console.error('Error de red o al conectar con el servidor:', error);
-      alert('No se pudo conectar con el servidor. ¿Está funcionando?');
+      await login({ email, password });
+      // Si el login funciona, el AuthContext te redirige solo.
+    } catch (error: any) {
+      alert("Error: " + (error.message || "Credenciales incorrectas"));
     }
   };
 
-  // ...
-// ... fin de tu función handleSubmit
-
-// ¡AÑADE ESTO!
-// Este "Hook de Efecto" se ejecutará CADA VEZ que
-// 'isAuthenticated' o 'isAdmin' cambien.
-useEffect(() => {
-  // Si el estado global nos dice que el login fue exitoso...
-  if (isAuthenticated) {
-
-    // ...entonces decidimos a dónde ir.
-    if (isAdmin) {
-      setLocation('/dashboard'); // ¡Los Admins van al Dashboard!
-    } else {
-      setLocation('/'); // ¡Los Usuarios Normales van al Inicio!
-    }
-  }
-}, [isAuthenticated, isAdmin, setLocation]); // "Dependencias"
-
-// return ( ... tu JSX ... )
-
-  // Esto es lo que se va a "dibujar" en la pantalla
   return (
-    <div style={{ padding: '2rem', maxWidth: '400px', margin: '0 auto' }}>
-      <h1>Página de Login</h1>
-      
-      {/* 4. CREAMOS EL FORMULARIO */}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
         
-        {/* CAMPO DE EMAIL */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label htmlFor="email">Email</label>
-          <input 
-            type="email" 
-            id="email"
-            value={email} // 5. Conectamos el valor al "estado"
-            onChange={(e) => setEmail(e.target.value)} // 6. Conectamos el cambio al "estado"
-          />
-        </div>
-        
-        {/* CAMPO DE CONTRASEÑA */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label htmlFor="password">Contraseña</label>
-          <input 
-            type="password" 
-            id="password"
-            value={password} // 5. Conectamos el valor al "estado"
-            onChange={(e) => setPassword(e.target.value)} // 6. Conectamos el cambio al "estado"
-          />
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-900">Iniciar Sesión</h2>
+          <p className="mt-2 text-sm text-gray-600">Bienvenido de nuevo</p>
         </div>
 
-        {/* BOTÓN DE ENVÍO */}
-        <button type="submit" style={{ padding: '0.5rem', background: '#007bff', color: 'white', border: 'none', cursor: 'pointer' }}>
-          Entrar
-        </button>
-      </form>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <input 
+                type="email" 
+                required 
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-black focus:border-black"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
 
-      <p style={{ marginTop: '1rem', textAlign: 'center' }}>
-        ¿No tienes una cuenta? <Link href="/register" style={{ color: '#007bff' }}>Regístrate aquí</Link>
-      </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Contraseña</label>
+              <div className="relative mt-1">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md pr-10 focus:ring-black focus:border-black"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+          </div>
 
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 transition-colors"
+          >
+            {isLoading ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
+
+        {/* 👇 AQUÍ ESTÁ EL ENLACE AL REGISTRO 👇 */}
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-600">
+            ¿No tienes cuenta?{' '}
+            <Link href="/register">
+              <span className="font-medium text-black hover:underline cursor-pointer">
+                Regístrate aquí
+              </span>
+            </Link>
+          </p>
+        </div>
+
+      </div>
     </div>
   );
 }
 
-// Esto "exporta" tu página para que App.tsx pueda importarla
 export default LoginPage;
