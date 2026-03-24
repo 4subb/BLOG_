@@ -54,40 +54,38 @@ export default function NavButton({ post, direction }: NavButtonProps) {
   }
 
   // Si está activo, devolvemos un Link con la imagen y los efectos
+  // ✅ SOLUCIÓN: El Link recibe las clases y envuelve el contenido, sin <a> extra
   return (
-    <Link href={`/post/${post.id}`}>
-      <a className={containerClasses}>
-        {/* CAPA 1: Imagen de fondo */}
-        {post.imageUrl && (
-          <div 
-            className={cn(
-              "absolute inset-0 z-0 bg-cover transition-transform duration-700 group-hover:scale-105",
-              // Alineación de la imagen según la dirección
-              isPrev ? "bg-right" : "bg-left"
-            )}
-            style={{ backgroundImage: `url(${post.imageUrl})` }}
-          />
-        )}
-
-        {/* CAPA 2: Gradiente de desvanecimiento (Fade) */}
-        {/* Esto crea la transición suave entre la imagen y el color sólido */}
+    <Link href={`/post/${post.id}`} className={containerClasses}>
+      {/* CAPA 1: Imagen de fondo */}
+      {post.imageUrl && (
         <div 
           className={cn(
-            "absolute inset-0 z-10",
-            isPrev 
-              // Prev: Desvanece de negro (izquierda) a transparente (derecha)
-              ? "bg-gradient-to-r from-black/90 via-black/60 to-transparent"
-              // Next: Desvanece de transparente (izquierda) a negro (derecha)
-              : "bg-gradient-to-l from-black/90 via-black/60 to-transparent"
+            "absolute inset-0 z-0 bg-cover transition-transform duration-700 group-hover:scale-105",
+            // Alineación de la imagen según la dirección
+            isPrev ? "bg-right" : "bg-left"
           )}
+          style={{ backgroundImage: `url(${post.imageUrl})` }}
         />
-        
-        {/* CAPA 3: Superposición oscura general para asegurar legibilidad */}
-        <div className="absolute inset-0 z-10 bg-black/20 group-hover:bg-black/30 transition-colors" />
+      )}
 
-        {/* CAPA 4: El contenido de texto (definido arriba) */}
-        {content}
-      </a>
+      {/* CAPA 2: Gradiente de desvanecimiento (Fade) */}
+      <div 
+        className={cn(
+          "absolute inset-0 z-10",
+          isPrev 
+            // Prev: Desvanece de negro (izquierda) a transparente (derecha)
+            ? "bg-gradient-to-r from-black/90 via-black/60 to-transparent"
+            // Next: Desvanece de transparente (izquierda) a negro (derecha)
+            : "bg-gradient-to-l from-black/90 via-black/60 to-transparent"
+        )}
+      />
+      
+      {/* CAPA 3: Superposición oscura general para asegurar legibilidad */}
+      <div className="absolute inset-0 z-10 bg-black/20 group-hover:bg-black/30 transition-colors" />
+
+      {/* CAPA 4: El contenido de texto (definido arriba) */}
+      {content}
     </Link>
   );
 }

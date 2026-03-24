@@ -3,7 +3,7 @@ import {
   type InsertPost, posts, type Post, postCategoryEnum,
   comments, type Comment, type InsertComment,
   postLikes, savedPosts,
-  appRankings, appSchedule, type AppRanking, type InsertAppRanking, type AppEvent, type InsertAppEvent
+  appRankings, appSchedule, type AppRanking, type InsertAppRanking, type AppEvent, type InsertAppEvent, gymLogs, type GymLog, type InsertGymLog
 } from "@shared/schema";
 import { db } from "./db"; 
 import { eq, sql, desc, and, ne, lt, gt, asc } from "drizzle-orm"; 
@@ -48,6 +48,12 @@ export interface IStorage {
   createEvent(event: InsertAppEvent): Promise<AppEvent>;
   getEvents(sport: string): Promise<AppEvent[]>;
   deleteEvent(id: string): Promise<boolean>;
+
+  // --- Gym Tracker ---
+  getGymLogsByUser(userId: string): Promise<GymLog[]>;
+  createGymLog(userId: string, log: InsertGymLog): Promise<GymLog>;
+  getPublicGymLogs(userId: string): Promise<GymLog[] | { message: string }>;
+  updateGymSettings(userId: string, isPublic: boolean, gender: string): Promise<User>;
 }
 
 export class DrizzleStorage implements IStorage {
@@ -95,5 +101,29 @@ export class DrizzleStorage implements IStorage {
   async createEvent(event: InsertAppEvent): Promise<AppEvent> { const result = await db.insert(appSchedule).values(event).returning(); return result[0]; }
   async getEvents(sport: string): Promise<AppEvent[]> { return db.select().from(appSchedule).where(eq(appSchedule.sport, sport as any)).orderBy(desc(appSchedule.eventDate)); }
   async deleteEvent(id: string): Promise<boolean> { const result = await db.delete(appSchedule).where(eq(appSchedule.id, id)).returning(); return result.length > 0; }
+
+  // --- Gym Tracker ---// --- Gym Tracker ---
+  async getGymLogsByUser(userId: string): Promise<GymLog[]> {
+    if (!userId) return []; // Seguro anti-crash
+    // OJO AQUÍ: La sintaxis de eq() debe llevar coma, no signo de igual
+    return await db.select().from(gymLogs).where(eq(gymLogs.userId, userId)).orderBy(desc(gymLogs.date));
+  }
+
+  async createGymLog(userId: string, log: InsertGymLog): Promise<GymLog> {
+    const [newLog] = await db.insert(gymLogs).values({ ...log, userId }).returning();
+    return newLog;
+  }
+
+  async getPublicGymLogs(userId: string): Promise<GymLog[] | { message: string }> {
+    if (!userId) return { message: "ID inválido" };
+    const user = await this.getUserById(userId);
+    if (!user || !user.isGymPublic) return { message: "Perfil de gimnasio privado" };
+    return await this.getGymLogsByUser(userId);
+  }
+
+  async updateGymSettings(userId: string, isGymPublic: boolean, gender: string): Promise<User> {
+    const [updatedUser] = await db.update(users).set({ isGymPublic, gender }).where(eq(users.id, userId)).returning();
+    return updatedUser;
+  }
 }
 export const storage = new DrizzleStorage();

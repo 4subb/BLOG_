@@ -1,13 +1,18 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage"; 
-import bcrypt from 'bcrypt';         
+import bcrypt from 'bcrypt';        
 import { z } from 'zod';            
-import { postCategoryEnum, insertPostSchema, insertCommentSchema, sportCategoryEnum } from '@shared/schema';
+import { 
+  postCategoryEnum, 
+  insertPostSchema, 
+  insertCommentSchema, 
+  sportCategoryEnum, 
+  insertGymLogSchema 
+} from '@shared/schema'; 
 
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(8) });
 
-// 1. CORRECCIÓN: Agregamos 'username' opcional al esquema de validación
 const registerSchema = z.object({ 
   email: z.string().email(), 
   password: z.string().min(8),
@@ -100,6 +105,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.delete('/api/admin/events/:id', isAdmin, async (req, res) => { await storage.deleteEvent(req.params.id); res.json({ message: "Borrado" }); });
 
+  // --- Gym Tracker (Personal & Protegido) ---
+  app.get('/api/gym/me', async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+      res.json(await storage.getGymLogsByUser(req.session.userId));
+    } catch (error) {
+      console.error("Error en el GET del Gym:", error);
+      res.status(500).json({ message: "Error interno del servidor" });
+    }
+  });
+
+  app.post('/api/gym', async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+      const val = insertGymLogSchema.safeParse(req.body);
+      if (!val.success) return res.status(400).json(val.error);
+      res.status(201).json(await storage.createGymLog(req.session.userId, val.data));
+    } catch (error) {
+      console.error("Error guardando registro de Gym:", error);
+      res.status(500).json({ message: "Error interno del servidor" });
+    }
+  });
+
+  app.patch('/api/gym/settings', async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+      const { isGymPublic, gender } = req.body;
+      res.json(await storage.updateGymSettings(req.session.userId, isGymPublic, gender));
+    } catch (error) {
+      res.status(500).json({ message: "Error actualizando configuración" });
+    }
+  });
+
+  app.get('/api/gym/user/:userId', async (req, res) => {
+    try {
+      const result = await storage.getPublicGymLogs(req.params.userId);
+      if ('message' in result) return res.status(403).json(result);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Error buscando el gimnasio del usuario" });
+    }
+  });
+
+  // Ruta pública para ver el gym de otro usuario (si lo permite)
+  app.get('/api/gym/user/:userId', async (req, res) => {
+    const result = await storage.getPublicGymLogs(req.params.userId);
+    if ('message' in result) return res.status(403).json(result);
+    res.json(result);
+  });
+
   // --- Públicas Blog ---
   app.get('/api/posts', async (req, res) => { res.json(await storage.getPosts()); });
   app.get('/api/posts/categoria/:category', async (req, res) => { res.json(await storage.getPostsByCategory(req.params.category)); });
@@ -157,19 +212,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     const password_hash = await bcrypt.hash(val.data.password, 10);
     
-    // 2. CORRECCIÓN: Guardamos username y creamos el usuario
     const newUser = await storage.createUser({ 
       email: val.data.email, 
       password_hash,
-      username: val.data.username // <--- Se guarda el nombre
+      username: val.data.username 
     });
 
-    // 3. CORRECCIÓN: AUTO-LOGIN (Establecer sesión inmediatamente)
     req.session.userId = newUser.id;
     req.session.email = newUser.email;
     req.session.role = newUser.role;
 
-    // Devolvemos el usuario completo
     res.status(201).json({ user: newUser });
   });
 

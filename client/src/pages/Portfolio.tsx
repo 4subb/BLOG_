@@ -11,7 +11,6 @@ import {
 import miFoto from "@/assets/perfil.png";
 
 export default function Portfolio() {
-  // 🗑️ LIMPIEZA: Quitamos 'i18n' y la función 'toggleLanguage' porque ya están en tu componente global
   const { t } = useTranslation(); 
 
   return (
@@ -34,7 +33,7 @@ export default function Portfolio() {
               </p>
               
               <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-4">
-                <a href="/CV.pdf" download="Jose_Angel_CV.pdf">
+                <a href="/Jose_Angel_Subias_Resume_2026.pdf" download="Jose_Angel_CV.pdf">
                   <Button className="bg-blue-500 hover:bg-blue-600 text-white gap-2">
                     <FileText className="h-4 w-4" /> {t('hero.cv')}
                   </Button>
@@ -98,8 +97,7 @@ export default function Portfolio() {
               <div className="border border-slate-200 rounded-xl p-6 shadow-sm bg-slate-50 flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                 <h3 className="text-2xl font-bold mb-3 text-slate-900">{t('projects.p1Title')}</h3>
                 <p className="text-slate-600 mb-6 leading-relaxed flex-1">{t('projects.p1Desc')}</p>
-                {/* 👇 AQUI FALTA TU LINK AL POST DE LA MULETA CUANDO LO CRIES 👇 */}
-                <Link href="/post/ID_DEL_POST_MULETA">
+                <Link href="/post/538e2184-a1e1-4183-8e81-e934917b5df6">
                   <Button variant="outline" className="gap-2 w-full sm:w-auto"><ExternalLink className="h-4 w-4" /> {t('projects.viewDetails')}</Button>
                 </Link>
               </div>
@@ -107,7 +105,7 @@ export default function Portfolio() {
               <div className="border border-slate-200 rounded-xl p-6 shadow-sm bg-slate-50 flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                 <h3 className="text-2xl font-bold mb-3 text-slate-900">{t('projects.p2Title')}</h3>
                 <p className="text-slate-600 mb-6 leading-relaxed flex-1">{t('projects.p2Desc')}</p>
-                <Link href="/post/ff6720b2-1340-46ba-ba8b-095a1a7ade15">
+                <Link href="/post/3af569c4-9866-4485-9d26-8c4ea0489743">
                   <Button variant="outline" className="gap-2 w-full sm:w-auto"><ExternalLink className="h-4 w-4" /> {t('projects.viewProject')}</Button>
                 </Link>
               </div>
@@ -115,7 +113,7 @@ export default function Portfolio() {
               <div className="border border-slate-200 rounded-xl p-6 shadow-sm bg-slate-50 flex flex-col md:col-span-2 lg:col-span-1 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                 <h3 className="text-2xl font-bold mb-3 text-slate-900">{t('projects.p3Title')}</h3>
                 <p className="text-slate-600 mb-6 leading-relaxed flex-1">{t('projects.p3Desc')}</p>
-                <Link href="/blog">
+                <Link href="/post/802be6cd-ba91-4367-93e2-653e204ba3e6">
                   <Button variant="outline" className="gap-2 w-full sm:w-auto"><ExternalLink className="h-4 w-4" /> {t('projects.liveDemo')}</Button>
                 </Link>
               </div>
@@ -158,22 +156,26 @@ export default function Portfolio() {
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
               <div className="border border-slate-200 p-6 rounded-xl shadow-sm bg-slate-50 hover:border-blue-300 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
-                <Award className="h-8 w-8 text-blue-500 mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="text-xl font-bold text-slate-900 mb-2">{t('certs.toefl')}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">{t('certs.toeflDesc')}</p>
+                <a href="/TOEFL ITP.pdf" download="Jose_Angel_TOEFL ITP.pdf">
+                  <Award className="h-8 w-8 text-blue-500 mb-4 group-hover:scale-110 transition-transform" />
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">{t('certs.toefl')}</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">{t('certs.toeflDesc')}</p></a>
               </div>
 
               <div className="border border-slate-200 p-6 rounded-xl shadow-sm bg-slate-50 hover:border-indigo-300 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
-                <Database className="h-8 w-8 text-indigo-500 mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="text-xl font-bold text-slate-900 mb-2">{t('certs.ibm1')}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">{t('certs.ibm1Desc')}</p>
+                <a href="/IBM DB2 Database Administration.pdf" download="Jose_Angel_IBM_Administration.pdf">
+                  <Database className="h-8 w-8 text-indigo-500 mb-4 group-hover:scale-110 transition-transform" />
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">{t('certs.ibm1')}</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">{t('certs.ibm1Desc')}</p></a>
               </div>
 
               <div className="border border-slate-200 p-6 rounded-xl shadow-sm bg-slate-50 hover:border-cyan-300 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
-                <Server className="h-8 w-8 text-cyan-500 mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="text-xl font-bold text-slate-900 mb-2">{t('certs.ibm2')}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">{t('certs.ibm2Desc')}</p>
+                <a href="/Intelligent Database Extraction with IBM DB2.pdf" download="Jose_Angel_IBM_Extraction.pdf">
+                  <Server className="h-8 w-8 text-cyan-500 mb-4 group-hover:scale-110 transition-transform" />
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">{t('certs.ibm2')}</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">{t('certs.ibm2Desc')}</p></a>
               </div>
             </div>
           </div>

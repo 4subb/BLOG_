@@ -21,6 +21,8 @@ import RegisterPage from "@/pages/Register";
 import DashboardPage from "@/pages/Dashboard";
 import ProfilePage from "@/pages/Profile"; 
 
+import EditPostPage from "@/pages/EditPost";
+
 function Router() {
   return (
     <Switch>
@@ -31,15 +33,15 @@ function Router() {
       <Route path="/deportes" component={Sports} />
       <Route path="/viajes" component={Travel} />
       
-      {/* 2. Ruta de Post Individual */}
+      {/*  CORRECCIÓN: Rutas dinámicas ESPECÍFICAS van primero */}
+      <Route path="/post/:id/edit" component={EditPostPage} />
+      
+      {/* 2. Ruta de Post Individual (El comodín va después) */}
       <Route path="/post/:id" component={PostDetails} />
       
-      {/* 3. RUTAS DE ACCESO (AQUÍ ESTABA EL ERROR) */}
-      {/* Forzamos que /login use LoginPage y /register use RegisterPage */}
+      {/* 3. RUTAS DE ACCESO */}
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
-      
-      {/* Si alguien va a /auth, lo mandamos al login por defecto */}
       <Route path="/auth" component={LoginPage} />
       
       {/* 4. Rutas Privadas */}

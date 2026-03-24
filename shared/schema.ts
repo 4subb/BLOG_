@@ -113,3 +113,20 @@ export type AppRanking = typeof appRankings.$inferSelect;
 export type InsertAppRanking = typeof appRankings.$inferInsert;
 export type AppEvent = typeof appSchedule.$inferSelect;
 export type InsertAppEvent = typeof appSchedule.$inferInsert;
+
+// --- Tabla del Gym Tracker ---
+export const gymLogs = pgTable("gym_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: timestamp("date").defaultNow().notNull(),
+  exercise: text("exercise").notNull(),
+  weight: integer("weight").notNull(),
+  sets: integer("sets").notNull(),
+  reps: integer("reps").notNull(),
+  notes: text("notes"),
+});
+
+// --- Schema de Validación Zod para el Gym ---
+export const insertGymLogSchema = createInsertSchema(gymLogs).omit({ 
+  id: true, 
+  date: true 
+});
