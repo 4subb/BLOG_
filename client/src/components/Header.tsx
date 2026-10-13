@@ -1,30 +1,57 @@
-import { Search, Menu, X } from "lucide-react";
+import { Menu, X, LayoutDashboard, LogOut, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
-// Importamos isAdmin también
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
+import ThemeToggle from "@/components/ThemeToggle";
+import LanguageToggle from "@/components/LanguageToggle";
+import { SpotifyPlayer } from "@/components/SpotifyPlayer";
+import { cn } from "@/lib/utils";
+import { easeOutExpo, springSoft } from "@/lib/motion";
 
 export default function Header() {
+  const { t } = useTranslation();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [hoveredPath, setHoveredPath] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
 
-  // 1. Obtenemos 'isAdmin' del contexto
   const { user, isAuthenticated, isLoading, logout, isAdmin } = useAuth();
 
+  // La barra gana opacidad y borde en cuanto el contenido pasa por debajo.
+  const { scrollY } = useScroll();
+  useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 8));
+
+  // Cerrar el menú móvil al navegar.
+  useEffect(() => setMobileMenuOpen(false), [location]);
+
   const navItems = [
-    { path: "/", label: "Inicio" },
-    { path: "/ingenieria", label: "Ingeniería" },
-    { path: "/deportes", label: "Deportes" },
-    { path: "/viajes", label: "Viajes y Fotografía" },
+    { path: "/", label: t("nav.home") },
+    { path: "/academico", label: t("nav.academic") },
+    { path: "/ingenieria", label: t("nav.engineering") },
+    { path: "/deportes", label: t("nav.sports") },
+    { path: "/viajes", label: t("nav.travel") },
+    { path: "/lectura", label: t("nav.reading") },
+    { path: "/galeria", label: t("nav.gallery") },
   ];
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Searching for:", searchQuery);
-  };
+  const isActive = (path: string) => (path === "/" ? location === "/" : location.startsWith(path));
+  const activePath = navItems.find((item) => isActive(item.path))?.path ?? null;
+  // La "píldora" sigue al cursor y vuelve a la ruta activa al salir de la nav.
+  const pillPath = hoveredPath ?? activePath;
+
+  const displayName = user?.username || user?.email?.split("@")[0];
+  const avatarSrc = user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`;
 
   const handleLogout = async () => {
     await logout();
@@ -32,143 +59,199 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b backdrop-blur-md bg-background/90">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16 gap-4">
-          
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full border-b transition-[background-color,border-color,box-shadow] duration-300",
+        scrolled || mobileMenuOpen
+          ? "border-border/70 bg-background/75 shadow-[0_1px_0_0_hsl(var(--foreground)/0.02)] backdrop-blur-xl backdrop-saturate-150"
+          : "border-transparent bg-background/0",
+      )}
+    >
+      <div className="page-container">
+        <div className="flex h-14 items-center gap-6">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 hover-elevate rounded-md px-2 py-1 transition-all duration-300">
-            <div className="text-2xl font-heading font-bold bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-              Blog
-            </div>
+          <Link href="/" className="group flex shrink-0 items-center gap-2.5 rounded-md">
+            <motion.span
+              whileHover={{ rotate: -8, scale: 1.06 }}
+              whileTap={{ scale: 0.92 }}
+              transition={springSoft}
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-[11px] font-semibold tracking-tight text-background"
+            >
+              ÁS
+            </motion.span>
+            <span className="hidden text-sm font-semibold tracking-tight sm:block">Ángel Subías</span>
           </Link>
 
-          {/* Navegación Desktop */}
-          <nav className="hidden md:flex items-center gap-2">
+          {/* Navegación desktop */}
+          <nav className="hidden items-center lg:flex" onMouseLeave={() => setHoveredPath(null)}>
             {navItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <Button
-                  variant={location === item.path ? "secondary" : "ghost"}
-                  size="sm"
-                  className="transition-all duration-300"
-                >
-                  {item.label}
-                </Button>
+              <Link
+                key={item.path}
+                href={item.path}
+                onMouseEnter={() => setHoveredPath(item.path)}
+                className={cn(
+                  "relative rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-200",
+                  isActive(item.path) ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {pillPath === item.path && (
+                  <motion.span
+                    layoutId="nav-pill"
+                    transition={springSoft}
+                    className="absolute inset-0 -z-10 rounded-md bg-accent"
+                  />
+                )}
+                {item.label}
               </Link>
             ))}
           </nav>
 
-          {/* Búsqueda Desktop */}
-          <form onSubmit={handleSearch} className="hidden md:flex items-center flex-1 max-w-xs ml-4">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 rounded-full" />
-            </div>
-          </form>
+          {/* Acciones */}
+          <div className="ml-auto flex items-center gap-1">
+            <SpotifyPlayer />
+            <LanguageToggle />
+            <ThemeToggle />
 
-          {/* --- ZONA DE USUARIO (DESKTOP) --- */}
-          <div className="hidden md:flex items-center gap-4 ml-auto">
-            {isLoading ? (
-              <Button variant="ghost" size="sm" disabled>Cargando...</Button>
-            ) : isAuthenticated ? (
-              <>
-                {/* 2. AVATAR Y USERNAME (Con enlace al perfil) */}
-                <Link href="/profile">
-                  <div className="flex items-center gap-2 cursor-pointer group">
-                    <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-300 group-hover:ring-2 group-hover:ring-primary transition-all">
-                      <img 
-                        src={user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} 
-                        alt="Avatar" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    {/* Mostramos Username si existe, si no el email */}
-                    <span className="text-sm font-medium group-hover:text-primary transition-colors hidden lg:block">
-                      {user?.username || user?.email?.split('@')[0]}
-                    </span>
-                  </div>
-                </Link>
-
-                {/* 3. BOTÓN PANEL DE CONTROL (Solo si es Admin) */}
-                {isAdmin && (
-                  <Link href="/dashboard">
-                    <Button variant="ghost" size="sm" className="text-primary font-bold">Panel</Button>
-                  </Link>
-                )}
-
-                <Button variant="outline" size="sm" onClick={handleLogout}>Salir</Button>
-              </>
-            ) : (
-              <>
-                <Link href="/login"><Button variant="ghost" size="sm">Iniciar Sesión</Button></Link>
-                <Link href="/register"><Button variant="default" size="sm">Registrarse</Button></Link>
-              </>
-            )}
-          </div>
-
-          {/* Botón Menú Móvil */}
-          <Button variant="ghost" size="icon" className="md:hidden ml-auto" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-        </div>
-
-        {/* --- MENÚ MÓVIL --- */}
-        {mobileMenuOpen && (
-          <div className="md:hidden pb-4 space-y-3 animate-in slide-in-from-top duration-200">
-            <form onSubmit={handleSearch} className="flex items-center">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input type="search" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 rounded-full" />
-              </div>
-            </form>
-            
-            <nav className="flex flex-col gap-1">
-              {navItems.map((item) => (
-                <Link key={item.path} href={item.path}>
-                  <Button variant={location === item.path ? "secondary" : "ghost"} className="w-full justify-start" onClick={() => setMobileMenuOpen(false)}>
-                    {item.label}
-                  </Button>
-                </Link>
-              ))}
-            </nav>
-
-            <div className="border-t pt-3 mt-3 space-y-1">
+            <div className="ml-2 hidden items-center gap-2 lg:flex">
               {isLoading ? (
-                <Button variant="ghost" className="w-full justify-start" disabled>Cargando...</Button>
+                <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
               ) : isAuthenticated ? (
-                <>
-                  {/* Perfil en Móvil */}
-                  <Link href="/profile">
-                    <div className="flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
-                        <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-300">
-                          <img src={user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="Avatar" className="w-full h-full object-cover" />
-                        </div>
-                        <span className="text-sm font-medium">{user?.username || user?.email}</span>
-                    </div>
-                  </Link>
-                  
-                  {/* Panel Admin en Móvil (Protegido) */}
-                  {isAdmin && (
-                    <Link href="/dashboard">
-                      <Button variant="ghost" className="w-full justify-start text-primary font-bold" onClick={() => setMobileMenuOpen(false)}>
-                        Panel de Control
-                      </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <motion.button
+                      whileHover={{ scale: 1.06 }}
+                      whileTap={{ scale: 0.94 }}
+                      transition={springSoft}
+                      className="h-8 w-8 overflow-hidden rounded-full ring-1 ring-border transition-shadow hover:ring-foreground/30"
+                      aria-label="Menú de usuario"
+                    >
+                      <img src={avatarSrc} alt="Avatar" className="h-full w-full object-cover" />
+                    </motion.button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" sideOffset={8} className="w-56">
+                    <DropdownMenuLabel className="font-normal">
+                      <p className="text-sm font-medium">{displayName}</p>
+                      <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <Link href="/profile">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <UserIcon className="mr-2 h-4 w-4" /> Perfil
+                      </DropdownMenuItem>
                     </Link>
-                  )}
-
-                  <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50" onClick={handleLogout}>
-                    Cerrar Sesión
-                  </Button>
-                </>
+                    {isAdmin && (
+                      <Link href="/dashboard">
+                        <DropdownMenuItem className="cursor-pointer">
+                          <LayoutDashboard className="mr-2 h-4 w-4" /> Panel de control
+                        </DropdownMenuItem>
+                      </Link>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 <>
-                  <Link href="/login"><Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)}>Iniciar Sesión</Button></Link>
-                  <Link href="/register"><Button variant="default" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)}>Registrarse</Button></Link>
+                  <Link href="/login">
+                    <Button variant="ghost" size="sm">Iniciar sesión</Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button size="sm">Registrarse</Button>
+                  </Link>
                 </>
               )}
             </div>
+
+            {/* Botón menú móvil */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={mobileMenuOpen}
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={mobileMenuOpen ? "close" : "open"}
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </motion.span>
+              </AnimatePresence>
+            </Button>
           </div>
-        )}
+        </div>
+
+        {/* Menú móvil */}
+        <AnimatePresence initial={false}>
+          {mobileMenuOpen && (
+            <motion.div
+              key="mobile-menu"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.35, ease: easeOutExpo }}
+              className="overflow-hidden lg:hidden"
+            >
+              <motion.nav
+                initial="hidden"
+                animate="show"
+                variants={{ show: { transition: { staggerChildren: 0.035, delayChildren: 0.05 } } }}
+                className="flex flex-col gap-0.5 pb-4 pt-2"
+              >
+                {navItems.map((item) => (
+                  <motion.div
+                    key={item.path}
+                    variants={{ hidden: { opacity: 0, x: -8 }, show: { opacity: 1, x: 0 } }}
+                  >
+                    <Link
+                      href={item.path}
+                      className={cn(
+                        "block rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                        isActive(item.path) ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  </motion.div>
+                ))}
+
+                <div className="mt-3 border-t border-border/70 pt-3">
+                  {isLoading ? null : isAuthenticated ? (
+                    <div className="flex flex-col gap-0.5">
+                      <Link href="/profile" className="flex items-center gap-3 rounded-md px-3 py-2.5 hover:bg-accent/60">
+                        <img src={avatarSrc} alt="Avatar" className="h-7 w-7 rounded-full ring-1 ring-border" />
+                        <span className="text-sm font-medium">{displayName}</span>
+                      </Link>
+                      {isAdmin && (
+                        <Link href="/dashboard" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent/60 hover:text-foreground">
+                          <LayoutDashboard className="h-4 w-4" /> Panel de control
+                        </Link>
+                      )}
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-destructive hover:bg-destructive/10"
+                      >
+                        <LogOut className="h-4 w-4" /> Cerrar sesión
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 px-1">
+                      <Link href="/login"><Button variant="outline" className="w-full">Iniciar sesión</Button></Link>
+                      <Link href="/register"><Button className="w-full">Registrarse</Button></Link>
+                    </div>
+                  )}
+                </div>
+              </motion.nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </header>
   );

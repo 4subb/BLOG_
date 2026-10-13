@@ -1,38 +1,42 @@
 import { Moon, Sun } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  // resolvedTheme (no theme): con defaultTheme="system", theme vale "system" y el icono no reflejaría el modo real.
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
+  // Avoid hydration mismatch by waiting for mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
-    
-    setTheme(initialTheme);
-    document.documentElement.classList.toggle("dark", initialTheme === "dark");
+    setMounted(true);
   }, []);
 
-  const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
-  };
+  const isDark = resolvedTheme === "dark";
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={toggleTheme}
-      className="rounded-full"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="overflow-hidden"
       data-testid="button-theme-toggle"
+      disabled={!mounted}
     >
-      {theme === "dark" ? (
-        <Sun className="h-5 w-5 transition-transform duration-300 rotate-0 scale-100" />
-      ) : (
-        <Moon className="h-5 w-5 transition-transform duration-300 rotate-0 scale-100" />
+      {mounted && (
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={isDark ? "sun" : "moon"}
+            initial={{ rotate: -90, scale: 0.5, opacity: 0 }}
+            animate={{ rotate: 0, scale: 1, opacity: 1 }}
+            exit={{ rotate: 90, scale: 0.5, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 28 }}
+          >
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </motion.span>
+        </AnimatePresence>
       )}
       <span className="sr-only">Toggle theme</span>
     </Button>

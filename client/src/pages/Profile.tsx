@@ -7,8 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type Post } from "@shared/schema";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Camera, Upload } from "lucide-react"; // Iconos nuevos
 
 export default function ProfilePage() {
@@ -90,9 +88,8 @@ export default function ProfilePage() {
   if (isLoading || !user) return null;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto py-10 px-4">
+    <div className="flex-1">
+      <main className="page-container py-14 sm:py-20">
         <div className="flex flex-col md:flex-row gap-8">
           
           {/* COLUMNA IZQUIERDA: Tarjeta de Identidad */}
@@ -106,7 +103,7 @@ export default function ProfilePage() {
                 {/* ZONA DE AVATAR */}
                 <div className="flex flex-col items-center">
                   <div className="relative group w-32 h-32 mb-4">
-                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-primary bg-gray-200 shadow-lg">
+                    <div className="w-32 h-32 rounded-full overflow-hidden border border-border bg-muted shadow-md">
                       <img 
                         src={avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
                         alt="Avatar" 
@@ -208,7 +205,6 @@ export default function ProfilePage() {
 
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

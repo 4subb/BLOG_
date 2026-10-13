@@ -1,20 +1,19 @@
 import { useState, useEffect } from "react";
 import { useRoute } from "wouter";
 import { type Post } from "@shared/schema";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { Link } from "wouter";
+import { motion, useScroll, useSpring } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-// 1. CAMBIO: Quitamos Send, agregamos Share2 y Check
-import { Calendar, MapPin, Share2, Check, Send } from "lucide-react"; 
+import { ArrowLeft, Calendar, MapPin, Check, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LikeButton from "@/components/LikeButton";
 import BookmarkButton from "@/components/BookmarkButton";
 import CommentSection from "@/components/CommentSection";
-import ThemeToggle from "@/components/ThemeToggle";
 import DOMPurify from 'dompurify';
 import NavButton from "@/components/NavButton";
+import { SmartMedia } from "@/components/SmartMedia"; // 🟢 CONEXIÓN CDN: Importamos el componente inteligente
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 
-// Tipo para la respuesta de la API
 type PostData = {
   current: Post;
   prev?: Post;
@@ -29,9 +28,12 @@ export default function PostDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  // 2. CAMBIO: Estados para la animación del avión
   const [isFlying, setIsFlying] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Barra de progreso de lectura (muelle para que no tiemble con la rueda del ratón)
+  const { scrollYProgress } = useScroll();
+  const readingProgress = useSpring(scrollYProgress, { stiffness: 200, damping: 30, restDelta: 0.001 });
 
   useEffect(() => {
     if (!postId) return;
@@ -55,105 +57,133 @@ export default function PostDetails() {
     fetchPost();
   }, [postId]);
 
-  // 3. CAMBIO: Lógica del Avión de Papel ✈️
   const handleShare = () => {
-    // Activa la clase CSS que hace volar el icono
     setIsFlying(true);
-    
-    // Copia al portapapeles
     navigator.clipboard.writeText(window.location.href);
 
-    // Secuencia de tiempos para la animación
     setTimeout(() => {
-      setIsFlying(false); // Resetea el avión
-      setCopied(true);    // Muestra el Check verde
-      
-      // Quita el Check después de 2 segundos
+      setIsFlying(false); 
+      setCopied(true);    
       setTimeout(() => setCopied(false), 2000);
-    }, 800); // 800ms dura la animación de vuelo
+    }, 800); 
   };
 
-  if (isLoading) return <div className="min-h-screen flex flex-col"><Header /><main className="flex-1 flex items-center justify-center py-20"><div className="text-lg text-muted-foreground animate-pulse">Cargando...</div></main><Footer /></div>;
-  if (error || !data) return <div className="min-h-screen flex flex-col"><Header /><main className="flex-1 flex items-center justify-center py-20"><div className="text-lg text-destructive">Post no encontrado.</div></main><Footer /></div>;
+  if (isLoading) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-5 py-16 sm:px-8">
+        <div className="mb-8 h-4 w-32 animate-pulse rounded bg-muted" />
+        <div className="mb-4 h-10 w-4/5 animate-pulse rounded bg-muted" />
+        <div className="mb-10 h-10 w-3/5 animate-pulse rounded bg-muted" />
+        <div className="aspect-[16/9] w-full animate-pulse rounded-xl bg-muted" />
+      </div>
+    );
+  }
+  if (error || !data) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 py-24 text-center">
+        <p className="text-lg font-medium">Post no encontrado.</p>
+        <Link href="/" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Volver al inicio</Link>
+      </div>
+    );
+  }
 
   const { current: post, prev, next } = data;
   const formattedDate = new Date(post.createdAt).toLocaleDateString();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <div className="fixed top-4 right-4 z-50"> <ThemeToggle /> </div>
-      <Header />
-      
-      <main className="flex-1 py-12 px-4 sm:px-6">
-        <article className="max-w-4xl mx-auto">
-          
-          {/* Imagen */}
+    <>
+      <motion.div
+        aria-hidden
+        style={{ scaleX: readingProgress }}
+        className="fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-foreground"
+      />
+
+      <article className="mx-auto w-full max-w-3xl px-5 pb-24 pt-12 sm:px-8 sm:pt-16">
+        <Stagger stagger={0.08}>
+          <StaggerItem>
+            <button
+              onClick={() => window.history.back()}
+              className="group mb-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5" /> Volver
+            </button>
+          </StaggerItem>
+
+          <StaggerItem className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+            <span className="font-mono text-xs uppercase tracking-[0.12em] text-foreground/80">{post.category}</span>
+            <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/60" />
+            <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {formattedDate}</span>
+            {post.country && (
+              <>
+                <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/60" />
+                <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {post.country}</span>
+              </>
+            )}
+          </StaggerItem>
+
+          <StaggerItem>
+            <h1 className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl">{post.title}</h1>
+          </StaggerItem>
+
+          {/* Acciones */}
+          <StaggerItem className="mt-8 flex items-center gap-1 border-y border-border/60 py-2">
+            <LikeButton postId={post.id} />
+            <BookmarkButton postId={post.id} />
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleShare}
+              className="relative ml-auto overflow-hidden"
+              title="Compartir"
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-emerald-500 animate-in zoom-in duration-300" />
+              ) : (
+                <Send
+                  className={`h-4 w-4 transition-all duration-700 ${isFlying ? "animate-fly" : ""}`}
+                />
+              )}
+            </Button>
+          </StaggerItem>
+
+          {/* 🟢 SECCIÓN MULTIMEDIA INTELIGENTE CONECTADA A TU CDN */}
           {post.imageUrl && (
-            <div className="flex justify-center mb-8">
-              <div className="relative max-w-full rounded-xl overflow-hidden border border-border/50 shadow-sm">
-                <img src={post.imageUrl} alt={post.title} className="block w-auto h-auto max-h-[650px]" />
-              </div>
-            </div>
+            <StaggerItem className="mt-10 overflow-hidden rounded-xl border border-border/60 bg-muted/40">
+              <SmartMedia
+                src={post.imageUrl}
+                alt={post.title}
+                className="mx-auto block h-auto max-h-[650px] w-full object-contain"
+              />
+            </StaggerItem>
           )}
 
-          {/* Barra Superior */}
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-4 border-b border-border/50">
-            <div className="flex flex-wrap items-center gap-4">
-              <Badge variant="secondary" className="text-sm px-3 py-1 capitalize font-medium">{post.category}</Badge>
-              <div className="flex items-center text-sm text-muted-foreground"><Calendar className="h-4 w-4 mr-2 opacity-70" /> <span>{formattedDate}</span></div>
-              {post.country && <div className="flex items-center text-sm text-muted-foreground"><MapPin className="h-4 w-4 mr-2 opacity-70" /> <span>{post.country}</span></div>}
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <LikeButton postId={post.id} />
-              <BookmarkButton postId={post.id} />
-              
-              {/* 4. CAMBIO: Botón con la lógica visual del avión */}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleShare}
-                className="relative overflow-hidden" // Importante para ocultar el avión cuando sale del botón
-                title="Compartir"
-              >
-                {copied ? (
-                  <Check className="h-5 w-5 text-green-500 animate-in zoom-in duration-300" />
-                ) : (
-                  <Send 
-                    className={`h-5 w-5 text-muted-foreground hover:text-primary transition-all duration-700 ${isFlying ? "animate-fly text-primary" : ""}`} 
-                  />
-                )}
-              </Button>
+          <StaggerItem>
+            <div
+              className="ql-editor prose prose-neutral mt-12 max-w-none px-0 dark:prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-a:underline-offset-4 prose-img:rounded-xl md:prose-lg"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
+            />
+          </StaggerItem>
+        </Stagger>
 
-            </div>
+        {/* Tags */}
+        {post.tags && post.tags.length > 0 && (
+          <div className="mt-14 flex flex-wrap gap-2">
+            {post.tags.map((tag, i) => (
+              <Badge key={i} variant="outline" className="rounded-full font-normal text-muted-foreground">#{tag}</Badge>
+            ))}
           </div>
+        )}
 
-          <h1 className="text-4xl md:text-5xl font-heading font-bold mb-8 leading-tight">{post.title}</h1>
-          
-          <div className="prose prose-lg md:prose-xl dark:prose-invert max-w-none text-muted-foreground leading-relaxed ql-editor" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }} />
+        {/* Navegación */}
+        <div className="mt-16 grid grid-cols-1 gap-4 border-t border-border/60 pt-12 md:grid-cols-2">
+          <NavButton post={prev} direction="prev" />
+          <NavButton post={next} direction="next" />
+        </div>
 
-          {/* Tags */}
-          {post.tags && post.tags.length > 0 && (
-            <div className="mt-12 pt-8 border-t border-border/50">
-              <div className="flex flex-wrap gap-2">
-                {post.tags.map((tag, i) => <Badge key={i} variant="outline">#{tag}</Badge>)}
-              </div>
-            </div>
-          )}
-
-          {/* --- NAVEGACIÓN ANTERIOR / SIGUIENTE --- */}
-          <div className="mt-16 pt-12 border-t border-border">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <NavButton post={prev} direction="prev" />
-              <NavButton post={next} direction="next" />
-            </div>
-          </div>
-
-          {/* Comentarios */}
-          <div className="mt-12"> <CommentSection postId={post.id} /> </div>
-        </article>
-      </main>
-      <Footer />
-    </div>
+        {/* Comentarios */}
+        <div className="mt-16"> <CommentSection postId={post.id} /> </div>
+      </article>
+    </>
   );
 }

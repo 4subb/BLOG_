@@ -23,14 +23,14 @@ export default function NavButton({ post, direction }: NavButtonProps) {
       // Alineación del texto
       isPrev ? "items-start text-left" : "items-end text-right"
     )}>
-      <div className="flex items-center text-sm text-white/80 mb-1 font-medium tracking-wider uppercase">
+      <div className={cn("flex items-center text-xs mb-1.5 font-mono tracking-[0.12em] uppercase", isDisabled ? "text-muted-foreground" : "text-white/75")}>
         {isPrev ? (
           <><ArrowLeft className="h-4 w-4 mr-2" /> Anterior</>
         ) : (
           <>Siguiente <ArrowRight className="h-4 w-4 ml-2" /></>
         )}
       </div>
-      <div className="font-heading font-boldtext-lg md:text-xl text-white leading-tight line-clamp-2 drop-shadow-md">
+      <div className={cn("font-semibold tracking-tight text-base md:text-lg leading-snug line-clamp-2", isDisabled ? "text-muted-foreground" : "text-white drop-shadow-md")}>
         {isDisabled ? (isPrev ? "No hay posts anteriores" : "Es el último post") : post.title}
       </div>
     </div>
@@ -38,8 +38,8 @@ export default function NavButton({ post, direction }: NavButtonProps) {
 
   // Clases base para el contenedor del botón
   const containerClasses = cn(
-    "relative group block w-full h-32 md:h-40 rounded-xl overflow-hidden border border-border/50 isolate",
-    isDisabled ? "opacity-50 cursor-not-allowed grayscale" : "hover:border-primary/50 cursor-pointer shadow-sm hover:shadow-md transition-all"
+    "relative group block w-full h-28 md:h-32 rounded-xl overflow-hidden border border-border/60 isolate",
+    isDisabled ? "opacity-60 cursor-not-allowed border-dashed" : "cursor-pointer bg-neutral-900 transition-[box-shadow,border-color] duration-300 hover:border-foreground/30 hover:shadow-lg"
   );
 
   // Si está desactivado, devolvemos un div simple
@@ -47,7 +47,7 @@ export default function NavButton({ post, direction }: NavButtonProps) {
     return (
       <div className={containerClasses}>
         {/* Fondo gris de placeholder */}
-        <div className="absolute inset-0 bg-muted/20 z-0" />
+        <div className="absolute inset-0 bg-muted/30 z-0" />
         {content}
       </div>
     );

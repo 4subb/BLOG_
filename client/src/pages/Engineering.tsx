@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { type Post } from "@shared/schema";
-// import { Link } from "wouter"; // <-- ¡YA NO LO NECESITAMOS AQUÍ!
-import Header from "@/components/Header";
-import PostCard from "@/components/PostCard"; 
+import PostCard, { PostCardSkeleton } from "@/components/PostCard";
 import RecentPostsSidebar from "@/components/RecentPostsSidebar";
-import Footer from "@/components/Footer";
-import ThemeToggle from "@/components/ThemeToggle";
+import PageHeader from "@/components/layout/PageHeader";
+import EmptyState from "@/components/layout/EmptyState";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { Code2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -19,7 +18,7 @@ export default function Engineering() {
       try {
         setIsLoading(true);
         const response = await fetch('/api/posts/categoria/ingenieria', {
-          credentials: 'include' 
+          credentials: 'include'
         });
         if (!response.ok) throw new Error('Error cargando posts');
         const data = await response.json();
@@ -27,13 +26,12 @@ export default function Engineering() {
       } catch (error) {
         console.error(error);
       } finally {
-        setIsLoading(false); 
+        setIsLoading(false);
       }
     };
     fetchEngineeringPosts();
   }, []);
 
-  // Preparamos los datos (El "truco" para que sea automático)
   const viewPosts = posts.map(post => ({
     ...post,
     date: new Date(post.createdAt).toLocaleDateString(),
@@ -46,56 +44,37 @@ export default function Engineering() {
   const recentPosts = viewPosts.slice(0, 3);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="fixed top-4 right-4 z-50">
-        <ThemeToggle />
-      </div>
-      <Header />
-      <main className="flex-1">
-        
-        <div className="bg-gradient-to-b from-muted/30 to-background py-12 px-4 sm:px-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <Code2 className="h-8 w-8 text-primary" />
+    <>
+      <PageHeader icon={Code2} eyebrow={t('nav.engineering')} title={t('pages.engTitle')} description={t('pages.engSubtitle')} />
+
+      <section className="page-container py-14 sm:py-20">
+        <div className="flex gap-12">
+          <div className="min-w-0 flex-1">
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                {[0, 1, 2, 3].map((i) => <PostCardSkeleton key={i} />)}
               </div>
-              <div>
-                <h1 className="text-4xl md:text-5xl font-heading font-bold">{t('pages.engTitle')}</h1>
-                <p className="text-muted-foreground mt-2">{t('pages.engSubtitle')}</p>
-              </div>
-            </div>
+            ) : viewPosts.length === 0 ? (
+              <EmptyState icon={Code2} text="No hay posts todavía." />
+            ) : (
+              <Stagger className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                {viewPosts.map((post) => (
+                  <StaggerItem key={post.id}>
+                    <PostCard {...post} />
+                  </StaggerItem>
+                ))}
+              </Stagger>
+            )}
           </div>
+
+          <aside className="hidden w-72 shrink-0 lg:block">
+            <div className="sticky top-24">
+              <RecentPostsSidebar posts={recentPosts} />
+            </div>
+          </aside>
         </div>
-
-        <section className="py-8 px-4 sm:px-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex gap-8">
-              <div className="flex-1">
-                {isLoading ? (
-                  <p>Cargando posts...</p>
-                ) : viewPosts.length === 0 ? (
-                  <p>No hay posts todavía.</p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* ¡AQUÍ ESTÁ EL ARREGLO! */}
-                    {/* Quitamos el <Link> envolvente. PostCard ya tiene el link adentro. */}
-                    {viewPosts.map((post) => (
-                      <PostCard key={post.id} {...post} />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <aside className="hidden lg:block w-80 flex-shrink-0">
-                <div className="sticky top-20">
-                  <RecentPostsSidebar posts={recentPosts} />
-                </div>
-              </aside>
-            </div>
-          </div>
-        </section>
-      </main>
-      <Footer />
-    </div>
+      </section>
+    </>
   );
 }
+

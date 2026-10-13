@@ -3,12 +3,15 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage"; 
 import bcrypt from 'bcrypt';        
 import { z } from 'zod';            
+import spotifyRouter from './spotify';
 import { 
   postCategoryEnum, 
   insertPostSchema, 
   insertCommentSchema, 
   sportCategoryEnum, 
-  insertGymLogSchema 
+  insertGymLogSchema, 
+  insertVisitedPlaceSchema, 
+  insertBucketListSchema
 } from '@shared/schema'; 
 
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(8) });
@@ -42,6 +45,9 @@ const isAdmin = (req: Request, res: Response, next: NextFunction) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // --- Spotify Integration ---
+  app.use('/api/spotify', spotifyRouter);
+
   // --- Admin Blog ---
   app.get('/api/posts/admin', isAdmin, async (req, res) => { res.json(await storage.getPostsAdmin()); });
   app.get('/api/posts/:id/admin', isAdmin, async (req, res) => { res.json(await storage.getPostByIdAdmin(req.params.id) || { message: "No encontrado" }); });
@@ -153,6 +159,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const result = await storage.getPublicGymLogs(req.params.userId);
     if ('message' in result) return res.status(403).json(result);
     res.json(result);
+  });
+
+  // --- Global Travel Dashboard (Viajes) ---
+  app.get('/api/travel/visited', async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+      res.json(await storage.getVisitedPlaces(req.session.userId));
+    } catch (error) {
+      res.status(500).json({ message: "Error cargando lugares visitados" });
+    }
+  });
+
+  app.post('/api/travel/visited', async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+      const val = insertVisitedPlaceSchema.safeParse(req.body);
+      if (!val.success) return res.status(400).json(val.error);
+      res.status(201).json(await storage.addVisitedPlace(req.session.userId, val.data));
+    } catch (error) {
+      res.status(500).json({ message: "Error guardando lugar visitado" });
+    }
+  });
+
+  app.get('/api/travel/bucketlist', async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+      res.json(await storage.getBucketList(req.session.userId));
+    } catch (error) {
+      res.status(500).json({ message: "Error cargando wishlist" });
+    }
+  });
+
+  app.post('/api/travel/bucketlist', async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+      const val = insertBucketListSchema.safeParse(req.body);
+      if (!val.success) return res.status(400).json(val.error);
+      res.status(201).json(await storage.addBucketList(req.session.userId, val.data));
+    } catch (error) {
+      res.status(500).json({ message: "Error guardando en wishlist" });
+    }
   });
 
   // --- Públicas Blog ---

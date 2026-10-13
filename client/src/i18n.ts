@@ -8,9 +8,19 @@ const resources = {
       hero: {
         badge: "Professional Portfolio",
         greeting: "Hi, I'm",
-        description: "Mechatronics Engineering student in final semester. Bridging the gap between advanced manufacturing, robotics, and software development. Available for a full-time international internship starting August 2026.",
+        description: "I am a Mechatronics Engineering student in my final academic stages, currently working as a Project Steering Intern for the High-Voltage Battery Plant at BMW Group San Luis Potosí. My passion lies in bridging the gap between advanced manufacturing, robotics, software development, and strategic project execution.",
         cv: "Download CV",
-        contact: "Contact Me"
+        contact: "Contact Me",
+        scrollReveal: "Scroll to reveal"
+      },
+      nav: {
+        home: "Home",
+        academic: "Academic",
+        engineering: "Engineering",
+        sports: "Sports",
+        travel: "Travel",
+        reading: "Reading",
+        gallery: "Gallery"
       },
       skills: {
         title: "Technical Skills",
@@ -84,7 +94,11 @@ const resources = {
         sportsTitle: "Sports",
         sportsDesc: "F1, Tennis & Cycling.",
         travelTitle: "Travel",
-        travelDesc: "Adventures around the world."
+        travelDesc: "Adventures around the world.",
+        readingTitle: "Reading",
+        readingDesc: "Books and knowledge.",
+        galleryTitle: "Gallery",
+        galleryDesc: "Media and memories."
       },
       pages: {
         engTitle: "Engineering",
@@ -92,7 +106,11 @@ const resources = {
         sportsTitle: "Sports",
         sportsSubtitle: "Cycling, Tennis and Formula One",
         travelTitle: "Travel & Photography",
-        travelSubtitle: "Adventures, amazing destinations and world chronicles"
+        travelSubtitle: "Adventures, amazing destinations and world chronicles",
+        readingTitle: "Reading",
+        readingSubtitle: "Book reviews, essays, and notes",
+        galleryTitle: "Gallery",
+        gallerySubtitle: "A visual collage of my journey"
       }
     }
   },
@@ -101,9 +119,19 @@ const resources = {
       hero: {
         badge: "Portafolio Profesional",
         greeting: "Hola, soy",
-        description: "Estudiante de Ingeniería Mecatrónica en último semestre. Conectando la manufactura avanzada, robótica y desarrollo de software. Disponible para residencia profesional internacional a tiempo completo a partir de agosto de 2026.",
+        description: "Soy estudiante de Ingeniería Mecatrónica en mi última etapa académica, actualmente trabajando como Pasante de Project Steering para la Planta de Baterías de Alto Voltaje en BMW Group San Luis Potosí. Mi pasión radica en conectar la manufactura avanzada, la robótica, el desarrollo de software y la ejecución estratégica de proyectos.",
         cv: "Descargar CV",
-        contact: "Contáctame"
+        contact: "Contáctame",
+        scrollReveal: "Desliza para descubrir"
+      },
+      nav: {
+        home: "Inicio",
+        academic: "Académico",
+        engineering: "Ingeniería",
+        sports: "Deportes",
+        travel: "Viajes",
+        reading: "Lectura",
+        gallery: "Galería"
       },
       skills: {
         title: "Habilidades Técnicas",
@@ -177,7 +205,11 @@ const resources = {
         sportsTitle: "Deportes",
         sportsDesc: "F1, Tenis y Ciclismo.",
         travelTitle: "Viajes",
-        travelDesc: "Aventuras por el mundo."
+        travelDesc: "Aventuras por el mundo.",
+        readingTitle: "Lectura",
+        readingDesc: "Libros y conocimiento.",
+        galleryTitle: "Galería",
+        galleryDesc: "Multimedia y recuerdos."
       },
       pages: {
         engTitle: "Ingeniería",
@@ -185,7 +217,11 @@ const resources = {
         sportsTitle: "Deportes",
         sportsSubtitle: "Ciclismo, Tenis y Fórmula Uno",
         travelTitle: "Viajes y Fotografía",
-        travelSubtitle: "Aventuras, destinos increíbles y crónicas del mundo"
+        travelSubtitle: "Aventuras, destinos increíbles y crónicas del mundo",
+        readingTitle: "Lectura",
+        readingSubtitle: "Reseñas de libros, ensayos y notas",
+        galleryTitle: "Galería",
+        gallerySubtitle: "Un collage visual de mi viaje"
       }
     }
   }

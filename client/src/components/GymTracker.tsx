@@ -2,14 +2,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dumbbell, Plus, User as UserIcon } from "lucide-react";
-import { useAuth } from "@/context/AuthContext"; // Asumiendo que tienes tu contexto
+import { useAuth } from "@/context/AuthContext"; 
 
+// Solo necesitamos el tipo de dato, nada de base de datos
 type GymLog = { id: string; date: string; exercise: string; weight: number; sets: number; reps: number; };
 
 // Algoritmo para calcular discos en barra olímpica (20kg)
 const calculatePlates = (totalWeight: number) => {
-  let weightToDistribute = (totalWeight - 20) / 2; // Le quitamos la barra y dividimos por lado
+  let weightToDistribute = (totalWeight - 20) / 2; 
   if (weightToDistribute <= 0) return [];
   
   const plateTypes = [25, 20, 15, 10, 5, 2.5, 1.25];
@@ -34,7 +36,7 @@ const BarbellVisualizer = ({ weight }: { weight: number }) => {
     if (p === 20) return "bg-blue-600";
     if (p === 15) return "bg-yellow-500";
     if (p === 10) return "bg-green-600";
-    return "bg-slate-800"; // Discos pequeños
+    return "bg-slate-800"; 
   };
 
   return (
@@ -87,48 +89,43 @@ export default function GymTracker() {
     }
   };
 
-  // Algoritmo de Hipertrofia: Tonelaje Total = Peso * Reps * Series
   const totalTonnage = logs.reduce((acc, log) => acc + (log.weight * log.sets * log.reps), 0);
-  
-  // Nivel calculado dinámicamente: cada 5000kg levantados subes de nivel
   const powerLevel = Math.floor(totalTonnage / 5000) + 1;
-  const muscleDensityOpacity = Math.min((powerLevel * 10) + 20, 100); // Topa en 100%
+  const muscleDensityOpacity = Math.min((powerLevel * 10) + 20, 100); 
 
-  if (!user) return <div className="p-8 text-center font-mono border-2 border-black bg-white">SISTEMA BLOQUEADO. REQUIERE AUTENTICACIÓN PARA TRACKING FÍSICO.</div>;
+  if (!user) return <Card className="p-8 text-center font-mono mt-8 border-destructive text-destructive">SISTEMA BLOQUEADO. REQUIERE AUTENTICACIÓN PARA TRACKING FÍSICO.</Card>;
 
   return (
-    <div className="border-2 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-6 font-mono">
-      <div className="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
-        <h2 className="text-2xl font-black uppercase flex items-center gap-2">
-          <Dumbbell className="h-6 w-6" /> Hipertrofia & Metadatos
-        </h2>
+    <Card className="mt-8 font-mono">
+      <CardHeader className="flex flex-row justify-between items-center border-b pb-4 mb-6">
+        <CardTitle className="text-2xl font-black uppercase flex items-center gap-2">
+          <Dumbbell className="h-6 w-6 text-primary" /> Hipertrofia & Metadatos
+        </CardTitle>
         <div className="text-right">
-          <div className="text-xs text-gray-500 uppercase">Tonelaje Total</div>
-          <div className="text-xl font-black">{totalTonnage.toLocaleString()} KG</div>
+          <div className="text-xs text-muted-foreground uppercase">Tonelaje Total</div>
+          <div className="text-xl font-black text-primary">{totalTonnage.toLocaleString()} KG</div>
         </div>
-      </div>
+      </CardHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
         {/* PANEL IZQUIERDO: AVATAR DINÁMICO */}
-        <div className="col-span-1 border-2 border-black p-4 flex flex-col items-center justify-center relative bg-gray-50 overflow-hidden">
-          <div className="absolute top-2 left-2 text-xs font-bold uppercase border border-black px-2 bg-white">Lvl. {powerLevel}</div>
+        <div className="col-span-1 border border-border p-4 flex flex-col items-center justify-center relative bg-muted/30 overflow-hidden rounded-md">
+          <div className="absolute top-2 left-2 text-xs font-bold uppercase border border-border px-2 bg-background rounded-sm">Lvl. {powerLevel}</div>
           
-          {/* Aquí simulamos el cuerpo rellenándose de músculo */}
-          <div className="relative w-32 h-48 border-2 border-dashed border-gray-400 mt-4 flex items-end justify-center">
-            <UserIcon className="absolute inset-0 w-full h-full text-gray-200" />
+          <div className="relative w-32 h-48 border-2 border-dashed border-muted-foreground/30 mt-4 flex items-end justify-center rounded-md">
+            <UserIcon className="absolute inset-0 w-full h-full text-muted-foreground/20" />
             
-            {/* Capa de "Músculo" que crece de abajo hacia arriba dependiendo de la opacidad */}
             <div 
-               className="absolute bottom-0 w-full bg-black transition-all duration-1000 ease-out"
+               className="absolute bottom-0 w-full bg-primary transition-all duration-1000 ease-out"
                style={{ height: `${muscleDensityOpacity}%`, opacity: muscleDensityOpacity / 100 }}
             >
-               <UserIcon className="absolute bottom-0 w-full h-48 text-white mix-blend-overlay" />
+               <UserIcon className="absolute bottom-0 w-full h-48 text-background mix-blend-overlay" />
             </div>
           </div>
-          <div className="mt-4 text-xs font-bold uppercase text-center">
-            Densidad Muscular: {muscleDensityOpacity}% <br/>
-            Género Base: {user.gender === 'female' ? 'Femenino' : 'Masculino'}
+          <div className="mt-4 text-xs font-bold uppercase text-center text-muted-foreground">
+            Densidad Muscular: <span className="text-foreground">{muscleDensityOpacity}%</span> <br/>
+            Género Base: <span className="text-foreground">{user.gender === 'female' ? 'Femenino' : 'Masculino'}</span>
           </div>
         </div>
 
@@ -137,30 +134,28 @@ export default function GymTracker() {
           <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
             <div className="col-span-2"><Label>Ejercicio</Label><Input required placeholder="Press Banca, Sentadilla..." value={exercise} onChange={e => setExercise(e.target.value)} /></div>
             <div><Label>Peso (kg)</Label><Input type="number" required value={weight} onChange={e => setWeight(e.target.value)} /></div>
-            <div className="col-span-2 md:col-span-1"><Button type="submit" className="w-full bg-black text-white font-bold"><Plus className="h-4 w-4 mr-1"/> Log</Button></div>
+            <div className="col-span-2 md:col-span-1"><Button type="submit" className="w-full font-bold"><Plus className="h-4 w-4 mr-1"/> Log</Button></div>
           </form>
 
-          {/* Visualizador de Barra en tiempo real basado en el input */}
           {parseInt(weight) >= 20 && (
-            <div className="border border-black p-2 bg-gray-50">
-              <div className="text-xs text-center uppercase font-bold text-gray-500 mb-2">Carga en Barra</div>
+            <div className="border border-border p-2 bg-muted/30 rounded-md">
+              <div className="text-xs text-center uppercase font-bold text-muted-foreground mb-2">Carga en Barra</div>
               <BarbellVisualizer weight={parseInt(weight)} />
             </div>
           )}
 
-          {/* Historial Reciente */}
-          <div className="h-40 overflow-y-auto border-t-2 border-black pt-2">
+          <div className="h-40 overflow-y-auto border-t border-border pt-2">
             {logs.map(log => (
-              <div key={log.id} className="flex justify-between items-center text-sm py-2 border-b border-gray-200 hover:bg-gray-100 px-2">
-                <div className="font-bold w-1/3">{log.exercise}</div>
-                <div className="w-1/3 text-center">{log.weight} kg</div>
-                <div className="w-1/3 text-right">{log.sets}x{log.reps}</div>
+              <div key={log.id} className="flex justify-between items-center text-sm py-2 border-b border-border/50 hover:bg-muted/50 px-2 cursor-default transition-colors">
+                <div className="font-bold w-1/3 truncate">{log.exercise}</div>
+                <div className="w-1/3 text-center text-muted-foreground">{log.weight} kg</div>
+                <div className="w-1/3 text-right text-muted-foreground">{log.sets}x{log.reps}</div>
               </div>
             ))}
           </div>
 
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -8,8 +8,6 @@ Font.whitelist = ['arial', 'courier-new', 'georgia', 'lucida', 'roboto', 'verdan
 Quill.register(Font, true);
 import 'react-quill/dist/quill.snow.css';
 
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -162,11 +160,11 @@ function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 py-12 px-4 md:px-8">
-        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-          <h1 className="text-3xl font-bold font-heading">Panel de Administrador</h1>
+    <div className="flex-1">
+      <main className="page-container max-w-5xl py-14 sm:py-20">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">Admin</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">Panel de Administrador</h1>
           
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full mt-6">
             <TabsList className="grid w-full grid-cols-3">
@@ -226,7 +224,6 @@ function DashboardPage() {
           </Tabs>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

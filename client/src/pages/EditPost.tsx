@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useRoute, useLocation } from 'wouter'; // 🟢 CORRECCIÓN 1: Hook nativo de Wouter
+import { useRoute, useLocation } from 'wouter'; 
 import { postCategoryEnum, type Post } from '@shared/schema';
 
 import ReactQuill, { Quill } from 'react-quill';
@@ -8,18 +8,16 @@ Font.whitelist = ['arial', 'courier-new', 'georgia', 'lucida', 'roboto', 'verdan
 Quill.register(Font, true);
 import 'react-quill/dist/quill.snow.css';
 
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { SmartMedia } from "@/components/SmartMedia"; // 🟢 CONEXIÓN CDN: Importamos el componente inteligente
 
 type Category = (typeof postCategoryEnum.enumValues)[number];
 
 export default function EditPostPage() {
-  // 🟢 CORRECCIÓN 1: Extracción segura del ID
   const [match, params] = useRoute("/post/:id/edit");
   const postId = params?.id;
   const [, setLocation] = useLocation();
@@ -37,18 +35,13 @@ export default function EditPostPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Si Wouter aún no resuelve el ID, no dispares el fetch
     if (!postId) return;
     
     const fetchPostData = async () => {
       try {
-        // CORRECCIÓN 2: Regresamos al endpoint de administrador para que pueda ver borradores
         const res = await fetch(`/api/posts/${postId}/admin`, { credentials: 'include' });
-        
         if (!res.ok) throw new Error("Error cargando la información del post.");
         const data = await res.json();
-        
-        // CORRECCIÓN 3: Seguridad en el parseo del JSON (por si viene envuelto en { post: {} })
         const post = data.post ? data.post : data;
         
         setTitle(post.title || '');
@@ -101,7 +94,6 @@ export default function EditPostPage() {
     }
   };
 
-  // ACTUALIZACIÓN: Igualamos los módulos del editor con los del Dashboard
   const modules = {
     toolbar: [
         [{ 'font': Font.whitelist }],
@@ -116,17 +108,33 @@ export default function EditPostPage() {
     ],
   };
 
-  if (isLoading) return <div className="p-8 text-center mt-20 font-bold text-slate-500">Conectando con la base de datos...</div>;
+  if (isLoading) return <div className="flex flex-1 items-center justify-center py-24 text-sm text-muted-foreground animate-pulse">Cargando post…</div>;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 py-12 px-4 md:px-8 mt-10">
+    <div className="flex-1">
+      <main className="px-5 py-14 sm:px-8 sm:py-20">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold font-heading mb-6">Editar Post</h1>
+          <h1 className="text-3xl font-semibold tracking-[-0.03em] mb-8">Editar Post</h1>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required/></div>
-            <div><Label>Imagen URL</Label><Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} /></div>
+            
+            {/* 🟢 SECCIÓN MULTIMEDIA ACTUALIZADA CON SMARTMEDIA */}
+            <div className="space-y-3">
+              <Label>Ruta / URL Multimedia (Imagen o Video de tu Servidor)</Label>
+              <Input 
+                value={imageUrl} 
+                onChange={(e) => setImageUrl(e.target.value)} 
+                placeholder="Ej: /maquinados/electroerosion.mp4 o URL completa"
+              />
+              {imageUrl && (
+                <div className="mt-2 border rounded-md p-2 bg-slate-50">
+                  <p className="text-xs text-muted-foreground mb-1 font-medium">Vista previa desde tu CDN:</p>
+                  <div className="max-h-[250px] overflow-hidden flex items-center justify-center">
+                    <SmartMedia src={imageUrl} className="max-h-[230px] w-auto object-contain rounded" />
+                  </div>
+                </div>
+              )}
+            </div>
             
             <div className="flex flex-col">
               <Label className="mb-2">Contenido</Label>
@@ -160,7 +168,6 @@ export default function EditPostPage() {
           </form>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

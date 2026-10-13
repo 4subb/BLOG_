@@ -1,5 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
+import { motion } from "framer-motion";
+import { hoverLift } from "@/lib/motion";
 
 interface SectionCardProps {
   title: string;
@@ -11,31 +13,34 @@ interface SectionCardProps {
 
 export default function SectionCard({ title, description, imageSrc, href, category }: SectionCardProps) {
   return (
-    <Link href={href}>
-      <div className="group relative overflow-hidden rounded-lg border bg-card hover-elevate active-elevate-2 transition-all duration-500 cursor-pointer h-[320px]" data-testid={`card-section-${category}`}>
-        <div className="absolute inset-0">
-          <img
-            src={imageSrc}
-            alt={title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 grayscale-[0.3] group-hover:grayscale-0"
-            data-testid={`img-section-${category}`}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent group-hover:from-background/95 group-hover:via-background/50 transition-all duration-500" />
-        </div>
-        
-        <div className="relative h-full flex flex-col justify-end p-6">
-          <h3 className="text-2xl font-heading font-bold mb-2 text-foreground group-hover:text-primary transition-colors duration-300" data-testid={`text-title-${category}`}>
+    <Link href={href} className="block rounded-xl">
+      <motion.div
+        {...hoverLift}
+        className="group relative h-[300px] cursor-pointer overflow-hidden rounded-xl border border-border/70 bg-card transition-shadow duration-300 hover:shadow-xl"
+        data-testid={`card-section-${category}`}
+      >
+        <img
+          src={imageSrc}
+          alt={title}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover grayscale-[0.4] transition-all duration-700 ease-out-expo group-hover:scale-[1.05] group-hover:grayscale-0"
+          data-testid={`img-section-${category}`}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/0" />
+
+        <div className="relative flex h-full flex-col justify-end p-6 text-white">
+          <h3 className="text-xl font-semibold tracking-tight" data-testid={`text-title-${category}`}>
             {title}
           </h3>
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2" data-testid={`text-description-${category}`}>
+          <p className="mt-1.5 line-clamp-2 text-sm text-white/70" data-testid={`text-description-${category}`}>
             {description}
           </p>
-          <div className="flex items-center gap-2 text-primary text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="mt-4 flex items-center gap-1.5 text-sm font-medium text-white/90">
             <span>Explorar</span>
-            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 ease-out-expo group-hover:translate-x-1" />
           </div>
         </div>
-      </div>
+      </motion.div>
     </Link>
   );
 }

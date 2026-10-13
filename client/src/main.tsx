@@ -6,17 +6,19 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-// 2. Importamos nuestro "Proveedor" (el "guardia")
+// 2. Importamos nuestro "Proveedor" (el "guardia") y el ThemeProvider
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "next-themes";
 
 createRoot(document.getElementById("root")!).render(
   // 3. StrictMode es una herramienta de React que te ayuda a encontrar bugs.
   // Es bueno tenerla durante el desarrollo.
   <React.StrictMode>
     {/* 4. ¡LA ENVOLTURA! */}
-    {/* Ahora, CUALQUIER componente dentro de <App> puede "preguntar" quién está conectado */}
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );

@@ -1,4 +1,5 @@
 import { 
+  visitedPlaces, bucketList, type VisitedPlace, type InsertVisitedPlace, type BucketList, type InsertBucketList,
   type User, type InsertUser, users,
   type InsertPost, posts, type Post, postCategoryEnum,
   comments, type Comment, type InsertComment,
@@ -125,5 +126,27 @@ export class DrizzleStorage implements IStorage {
     const [updatedUser] = await db.update(users).set({ isGymPublic, gender }).where(eq(users.id, userId)).returning();
     return updatedUser;
   }
+
+  // --- Global Travel Dashboard ---
+  async getVisitedPlaces(userId: string): Promise<VisitedPlace[]> {
+    if (!userId) return [];
+    return await db.select().from(visitedPlaces).where(eq(visitedPlaces.userId, userId));
+  }
+
+  async addVisitedPlace(userId: string, place: InsertVisitedPlace): Promise<VisitedPlace> {
+    const [newPlace] = await db.insert(visitedPlaces).values({ ...place, photos: place.photos as any, userId }).returning();
+    return newPlace;
+  }
+
+  async getBucketList(userId: string): Promise<BucketList[]> {
+    if (!userId) return [];
+    return await db.select().from(bucketList).where(eq(bucketList.userId, userId));
+  }
+
+  async addBucketList(userId: string, item: InsertBucketList): Promise<BucketList> {
+    const [newItem] = await db.insert(bucketList).values({ ...item, userId }).returning();
+    return newItem;
+  }
+
 }
 export const storage = new DrizzleStorage();

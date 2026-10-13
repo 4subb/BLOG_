@@ -6,9 +6,9 @@ export default {
   theme: {
     extend: {
       borderRadius: {
-        lg: ".5625rem", /* 9px */
-        md: ".375rem", /* 6px */
-        sm: ".1875rem", /* 3px */
+        lg: "var(--radius)", /* 10px */
+        md: "calc(var(--radius) - 2px)", /* 8px */
+        sm: "calc(var(--radius) - 4px)", /* 6px */
       },
       colors: {
         // Flat / base colors (regular buttons)
@@ -86,7 +86,7 @@ export default {
         sans: ["var(--font-sans)"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
-        heading: ["'Space Grotesk'", "var(--font-sans)"],
+        heading: ["var(--font-sans)"],
       },
       keyframes: {
         "accordion-down": {
@@ -97,6 +97,9 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+      },
+      transitionTimingFunction: {
+        "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",

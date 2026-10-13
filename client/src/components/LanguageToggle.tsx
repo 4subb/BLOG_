@@ -1,27 +1,35 @@
 import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Globe } from "lucide-react";
 
 export default function LanguageToggle() {
   const { i18n } = useTranslation();
+  const isSpanish = i18n.language.startsWith("es");
 
   const toggleLanguage = () => {
-    // Detecta el idioma actual y lo cambia al contrario
-    const newLang = i18n.language.startsWith('es') ? 'en' : 'es';
-    i18n.changeLanguage(newLang);
+    i18n.changeLanguage(isSpanish ? "en" : "es");
   };
 
   return (
-    <div className="fixed top-20 right-4 z-50">
-      <Button 
-        onClick={toggleLanguage} 
-        variant="outline" 
-        size="sm" 
-        className="bg-white shadow-md rounded-full text-slate-900 hover:bg-slate-100"
-      >
-         <Globe className="h-4 w-4 mr-2" />
-         {i18n.language.startsWith('es') ? 'EN' : 'ES'}
-      </Button>
-    </div>
+    <Button
+      onClick={toggleLanguage}
+      variant="ghost"
+      size="icon"
+      className="w-9 overflow-hidden font-mono text-[11px] font-medium"
+      aria-label={isSpanish ? "Switch to English" : "Cambiar a español"}
+      data-testid="button-language-toggle"
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={isSpanish ? "es" : "en"}
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -10, opacity: 0 }}
+          transition={{ duration: 0.18 }}
+        >
+          {isSpanish ? "EN" : "ES"}
+        </motion.span>
+      </AnimatePresence>
+    </Button>
   );
 }

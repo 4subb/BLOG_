@@ -1,9 +1,10 @@
 import { Link } from "wouter";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowUpRight, MapPin } from "lucide-react";
 import LikeButton from "./LikeButton";
-import BookmarkButton from "./BookmarkButton"; // Asegúrate de que este archivo exista
+import BookmarkButton from "./BookmarkButton";
+import { cn } from "@/lib/utils";
+import { hoverLift } from "@/lib/motion";
 
 interface PostCardProps {
   id: string;
@@ -11,89 +12,101 @@ interface PostCardProps {
   category: string;
   imageUrl?: string | null;
   country?: string | null;
-  content?: string; 
+  content?: string;
   createdAt?: Date;
   date?: string;
   excerpt?: string;
   tags?: string[] | null;
   className?: string;
-  [key: string]: any; 
+  // "grid": tarjeta vertical (rejillas). "list": horizontal en desktop (listados de lectura).
+  layout?: "grid" | "list";
+  [key: string]: any;
 }
 
-export default function PostCard({ 
-  id, title, content, category, createdAt, imageUrl, country, className, date, excerpt 
+export default function PostCard({
+  id, title, content, category, createdAt, imageUrl, country, className, date, excerpt, layout = "grid",
 }: PostCardProps) {
 
   const finalExcerpt = excerpt || (content ? content.replace(/<[^>]*>?/gm, '').substring(0, 120) + "..." : "");
   const finalDate = date || (createdAt ? new Date(createdAt).toLocaleDateString() : "");
+  const isList = layout === "list";
 
   return (
-    <Link href={`/post/${id}`}>
-      <Card className={`overflow-hidden hover-elevate active-elevate-2 cursor-pointer transition-all duration-300 flex flex-col h-full ${className || ''}`}>
-        
-        {/* --- ARREGLO DE IMAGEN --- */}
+    <Link href={`/post/${id}`} className="block h-full rounded-xl focus-visible:outline-none">
+      <motion.article
+        {...hoverLift}
+        className={cn(
+          "group relative flex h-full overflow-hidden rounded-xl border border-border/70 bg-card",
+          "transition-[border-color,box-shadow] duration-300 hover:border-foreground/15 hover:shadow-lg",
+          isList ? "flex-col sm:flex-row" : "flex-col",
+          className,
+        )}
+      >
         {imageUrl && (
-          <div className="w-full overflow-hidden bg-gray-100">
-            {/* Quitamos 'h-48' y 'absolute' para que la altura sea automática según la imagen */}
-            {/* Usamos 'w-full' para que ocupe el ancho y 'h-auto' para mantener proporción */}
-            {/* 'max-h-[300px]' evita que una imagen vertical sea demasiado alta */}
-            <img 
-              src={imageUrl} 
-              alt={title} 
-              className="w-full h-auto max-h-[300px] object-cover transition-transform duration-500 hover:scale-105" 
+          <div
+            className={cn(
+              "relative shrink-0 overflow-hidden bg-muted",
+              isList ? "aspect-[16/9] sm:aspect-auto sm:w-64 md:w-72" : "aspect-[16/10]",
+            )}
+          >
+            <img
+              src={imageUrl}
+              alt={title}
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.04]"
             />
           </div>
         )}
 
-        <div className="p-5 flex flex-col flex-1 justify-between">
-          <div>
-            <h3 className="text-xl font-heading font-bold mb-2 line-clamp-2 leading-tight">{title}</h3>
-            <p className="text-muted-foreground text-sm line-clamp-3 mb-4">{finalExcerpt}</p>
+        <div className="flex flex-1 flex-col p-5 sm:p-6">
+          <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-mono uppercase tracking-[0.1em] text-foreground/80">{category}</span>
+            {finalDate && (
+              <>
+                <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/60" />
+                <time>{finalDate}</time>
+              </>
+            )}
+            {country && (
+              <>
+                <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/60" />
+                <span className="flex max-w-[110px] items-center gap-1 truncate">
+                  <MapPin className="h-3 w-3 shrink-0" /> {country}
+                </span>
+              </>
+            )}
           </div>
 
-          <div>
-            {/* LÍNEA SEPARADORA */}
-            <div className="border-t border-border/50 my-3"></div>
+          <h3 className="mb-2 flex items-start justify-between gap-3 text-lg font-semibold leading-snug tracking-tight">
+            <span className="line-clamp-2">{title}</span>
+            <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 -translate-x-1 translate-y-1 text-muted-foreground opacity-0 transition-all duration-300 ease-out-expo group-hover:translate-x-0 group-hover:translate-y-0 group-hover:opacity-100" />
+          </h3>
+          <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{finalExcerpt}</p>
 
-            {/* --- PIE DE LA TARJETA (ALINEACIÓN Y BOTONES) --- */}
-            <div className="flex items-center justify-between">
-              
-              {/* IZQUIERDA: Datos alineados al centro verticalmente */}
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="text-xs font-normal px-2 py-1 h-6 flex items-center">{category}</Badge>
-                
-                {finalDate && (
-                  <div className="flex items-center text-xs text-muted-foreground h-6">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    <span>{finalDate}</span>
-                  </div>
-                )}
-
-                {country && (
-                  <div className="flex items-center text-xs text-muted-foreground h-6">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    <span className="max-w-[80px] truncate">{country}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* DERECHA: Botones de Acción */}
-              <div className="flex items-center gap-1 h-6"> {/* Altura fija h-6 para alinear con la izquierda */}
-                <div onClick={(e) => e.stopPropagation()} className="flex gap-0 items-center">
-                   {/* Botón de Like */}
-                   <LikeButton postId={id} />
-                   
-                   {/* --- ARREGLO: BOTÓN GUARDAR AÑADIDO --- */}
-                   <div className="scale-90"> {/* Pequeño ajuste de escala si se ve muy grande */}
-                     <BookmarkButton postId={id} />
-                   </div>
-                </div>
-              </div>
-
+          <div className="mt-auto flex items-center justify-end gap-0.5 pt-5">
+            {/* Los botones hacen preventDefault/stopPropagation para no disparar el Link */}
+            <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+              <LikeButton postId={id} />
+              <BookmarkButton postId={id} />
             </div>
           </div>
         </div>
-      </Card>
+      </motion.article>
     </Link>
+  );
+}
+
+export function PostCardSkeleton({ layout = "grid" }: { layout?: "grid" | "list" }) {
+  const isList = layout === "list";
+  return (
+    <div className={cn("flex overflow-hidden rounded-xl border border-border/70 bg-card", isList ? "flex-col sm:flex-row" : "flex-col")}>
+      <div className={cn("animate-pulse bg-muted", isList ? "aspect-[16/9] sm:aspect-auto sm:h-auto sm:w-64 md:w-72" : "aspect-[16/10]")} />
+      <div className="flex-1 space-y-3 p-6">
+        <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+        <div className="h-5 w-4/5 animate-pulse rounded bg-muted" />
+        <div className="h-3 w-full animate-pulse rounded bg-muted" />
+        <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+      </div>
+    </div>
   );
 }

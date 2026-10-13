@@ -1,0 +1,28 @@
+# Project Architecture & Stack
+- Frontend: React 18, Vite, Tailwind CSS, Framer Motion, Radix UI, Wouter.
+- Backend: Express.js, Node.js.
+- Database: PostgreSQL (Neon Serverless), Drizzle ORM.
+- Auth: Passport, express-session (with Postgres session store).
+- Typing: TypeScript (Strict end-to-end typing using drizzle-zod).
+
+# Source of Truth
+- **Database Schema**: ALL types and schemas must derive from `shared/schema.ts`. Do not define standalone types in the frontend or backend if they map to a database entity; use `typeof tables.$inferSelect` or `z.infer<typeof schema>`.
+- **API Responses**: Always validate API payloads against Zod schemas defined in `shared/schema.ts`.
+
+# Design Language: Minimal Premium (Linear / Vercel)
+All UI components and layouts MUST follow these principles (full spec in `design_guidelines.md`):
+- **Philosophy**: Content first, generous whitespace, 1px hairline borders, monochrome palette, motion that feels alive but never decorative.
+- **Color**: Use only theme tokens from `client/src/index.css` (`bg-background`, `bg-card`, `text-muted-foreground`, `border-border`...). Never hard-code `gray-*`, `white`, `black`. `primary` is near-black (light) / near-white (dark); blue (`ring`) is reserved for focus.
+- **Typography**: Geist (sans + headings), Geist Mono for eyebrows/metadata. Headings `font-semibold` with negative tracking (`tracking-[-0.03em]`).
+- **Layout**: Pages render only their content; `Header`/`Footer` live in `components/layout/AppLayout.tsx`. Use `.page-container` for width/gutters and `PageHeader` for section heroes.
+- **Motion** (Framer Motion, presets in `client/src/lib/motion.ts`):
+  - Route transitions are handled in `App.tsx` — do not add per-page entry wrappers.
+  - Lists/grids: `<Stagger>` + `<StaggerItem>` from `components/motion/Stagger.tsx`.
+  - Interactive cards: spread `hoverLift` (spring lift + tap squish). No `hover:scale-105` on buttons.
+  - Never animate `filter` on layout wrappers (breaks `position: sticky/fixed` inside).
+
+# Development Rules
+- Use `npm run check` to ensure strict TypeScript validation passes.
+- Do not add new `any` casts unless absolutely necessary.
+- Radix UI should be the default for interactive, accessible components. Always wrap them in Tailwind styles matching the minimal design language.
+- Ensure API routes use `req.session.userId` to validate authentication for protected operations.

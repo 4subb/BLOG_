@@ -5,8 +5,9 @@ import { z } from "zod";
 
 // --- ENUMS ---
 export const userRoleEnum = pgEnum('user_role', ['admin', 'user']);
-export const postCategoryEnum = pgEnum('post_category', ['ingenieria', 'deportes', 'viajes']);
+export const postCategoryEnum = pgEnum('post_category', ['ingenieria', 'deportes', 'viajes', 'lectura', 'galeria']);
 export const sportCategoryEnum = pgEnum('sport_category', ['ciclismo', 'tenis', 'f1']);
+
 
 // --- TABLAS ---
 export const users = pgTable("users", {
@@ -16,6 +17,8 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   password_hash: text("password_hash").notNull(),
   role: userRoleEnum('role').default('user').notNull(),
+  gender: text("gender").default('male').notNull(), // 'male' o 'female'
+  isGymPublic: boolean("is_gym_public").default(false).notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -73,6 +76,57 @@ export const appSchedule = pgTable("app_schedule", {
   location: text('location'),
 });
 
+// --- Tabla del Gym Tracker ---
+export const gymLogs = pgTable("gym_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  date: timestamp("date").defaultNow().notNull(),
+  exercise: text("exercise").notNull(),
+  weight: integer("weight").notNull(),
+  sets: integer("sets").notNull(),
+  reps: integer("reps").notNull(),
+  notes: text("notes"),
+});
+
+// --- Tablas de Viajes (Global Travel Dashboard) ---
+export const visitedPlaces = pgTable("visited_places", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  countryCode: varchar("country_code", { length: 3 }).notNull(), // Ej. MEX, FRA, USA
+  rating: integer("rating").notNull().default(5), // Calificación de 1 a 5
+  bestMemory: text("best_memory"),
+  worstMemory: text("worst_memory"),
+  photos: jsonb('photos').$type<string[]>().default([]), // Arreglo de URLs de fotos
+  visitDate: timestamp("visit_date"), // Cuándo fuiste
+});
+
+export const bucketList = pgTable("bucket_list", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  countryCode: varchar("country_code", { length: 3 }).notNull(),
+  priority: integer("priority").notNull().default(2), // 1: Alta (Urge), 2: Media, 3: Baja
+  notes: text("notes"), // "Quiero visitar el museo de Louvre..."
+});
+
+// --- Schemas Zod para Viajes ---
+export const insertVisitedPlaceSchema = createInsertSchema(visitedPlaces).omit({ id: true, userId: true });
+export const insertBucketListSchema = createInsertSchema(bucketList).omit({ id: true, userId: true });
+
+// --- Tipos Exportados para Viajes (Agrega esto al final del archivo) ---
+export type VisitedPlace = typeof visitedPlaces.$inferSelect;
+export type InsertVisitedPlace = z.infer<typeof insertVisitedPlaceSchema>;
+export type BucketList = typeof bucketList.$inferSelect;
+export type InsertBucketList = z.infer<typeof insertBucketListSchema>;
+
+
+
+
+
+
+//--Schemas Zod
+export const insertGymLogSchema = createInsertSchema(gymLogs).omit({ id: true, date: true, userId: true });
+
+
 
 // --- SCHEMAS DE VALIDACIÓN (ZOD) ---
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -114,19 +168,5 @@ export type InsertAppRanking = typeof appRankings.$inferInsert;
 export type AppEvent = typeof appSchedule.$inferSelect;
 export type InsertAppEvent = typeof appSchedule.$inferInsert;
 
-// --- Tabla del Gym Tracker ---
-export const gymLogs = pgTable("gym_logs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  date: timestamp("date").defaultNow().notNull(),
-  exercise: text("exercise").notNull(),
-  weight: integer("weight").notNull(),
-  sets: integer("sets").notNull(),
-  reps: integer("reps").notNull(),
-  notes: text("notes"),
-});
-
-// --- Schema de Validación Zod para el Gym ---
-export const insertGymLogSchema = createInsertSchema(gymLogs).omit({ 
-  id: true, 
-  date: true 
-});
+export type GymLog = typeof gymLogs.$inferSelect;
+export type InsertGymLog = z.infer<typeof insertGymLogSchema>;
