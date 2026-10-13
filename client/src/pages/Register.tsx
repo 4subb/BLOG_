@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import AuthShell from "@/components/layout/AuthShell";
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from "@/context/AuthContext";
 import React, { useState } from 'react';
 import { Eye, EyeOff, AlertCircle } from "lucide-react"; // Icono de alerta
 import { cn } from "@/lib/utils"; // Utilidad de Tailwind para mezclar clases

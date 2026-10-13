@@ -1,7 +1,7 @@
 // Contenido NUEVO (actualizado) para client/src/components/CommentSection.tsx
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";

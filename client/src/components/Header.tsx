@@ -12,7 +12,7 @@ import { Link, useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
 import { SpotifyPlayer } from "@/components/SpotifyPlayer";

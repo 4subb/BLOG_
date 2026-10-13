@@ -1,6 +1,6 @@
 import { Link } from "wouter"; // Importante: Link de wouter
 import AuthShell from "@/components/layout/AuthShell";
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from "@/context/AuthContext";
 import React, { useState } from 'react';
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
