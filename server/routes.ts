@@ -1,9 +1,10 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import type { Express, Request, Response, NextFunction, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage"; 
 import bcrypt from 'bcrypt';        
 import { z } from 'zod';            
 import spotifyRouter from './spotify';
+import { catchAsyncErrors } from './asyncErrors';
 import { 
   postCategoryEnum, 
   insertPostSchema, 
@@ -38,12 +39,66 @@ const createEventSchema = z.object({
   location: z.string().optional().nullable(),
 });
 
+// Campos que el propio usuario puede editar de su perfil (nunca role, email, password_hash, id...)
+const updateProfileSchema = z.object({
+  username: z.string().trim().min(3).max(40).optional(),
+  avatarUrl: z.string().trim().url().max(2048).or(z.literal("")).optional(),
+}).strict();
+
+const updateRoleSchema = z.object({ role: z.enum(['admin', 'user']) });
+
+const gymSettingsSchema = z.object({
+  isGymPublic: z.boolean(),
+  gender: z.enum(['male', 'female']),
+});
+
+// Nunca devolver el hash de la contraseña al cliente
+function toPublicUser<T extends { password_hash?: string }>(user: T) {
+  const { password_hash: _omit, ...rest } = user;
+  return rest;
+}
+
+// Limitador en memoria para login/registro: 10 intentos por IP cada 15 min
+function rateLimit(max: number, windowMs: number): RequestHandler {
+  const hits = new Map<string, { count: number; resetAt: number }>();
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = req.ip || 'unknown';
+    const entry = hits.get(key);
+    if (!entry || entry.resetAt < now) {
+      hits.set(key, { count: 1, resetAt: now + windowMs });
+      if (hits.size > 10_000) hits.forEach((v, k) => { if (v.resetAt < now) hits.delete(k); });
+      return next();
+    }
+    if (++entry.count > max) {
+      res.setHeader('Retry-After', Math.ceil((entry.resetAt - now) / 1000));
+      return res.status(429).json({ message: "Demasiados intentos. Inténtalo más tarde." });
+    }
+    next();
+  };
+}
+const authLimiter = rateLimit(10, 15 * 60 * 1000);
+
+// Regenera el ID de sesión al autenticarse (evita fijación de sesión)
+function startSession(req: Request, user: { id: string; email: string; role: 'admin' | 'user' }) {
+  return new Promise<void>((resolve, reject) => {
+    req.session.regenerate((err) => {
+      if (err) return reject(err);
+      req.session.userId = user.id;
+      req.session.email = user.email;
+      req.session.role = user.role;
+      req.session.save((saveErr) => (saveErr ? reject(saveErr) : resolve()));
+    });
+  });
+}
+
 const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (req.session.role !== 'admin') return res.status(403).json({ message: "Acceso denegado" });
   next();
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  catchAsyncErrors(app);
   
   // --- Spotify Integration ---
   app.use('/api/spotify', spotifyRouter);
@@ -74,7 +129,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/users', isAdmin, async (req, res) => { res.json(await storage.getUsers()); });
   app.put('/api/users/:id/role', isAdmin, async (req, res) => {
     if (req.params.id === req.session.userId) return res.status(400).json({ message: "No puedes cambiar tu rol" });
-    await storage.updateUserRole(req.params.id, req.body.role);
+    const val = updateRoleSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    await storage.updateUserRole(req.params.id, val.data.role);
     res.json({ message: "Rol actualizado" });
   });
   app.delete('/api/users/:id', isAdmin, async (req, res) => {
@@ -86,10 +143,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // --- Perfil Usuario ---
   app.patch('/api/users/profile', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ message: "No autorizado" });
+    const val = updateProfileSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
     try {
-      const updatedUser = await storage.updateUser(req.session.userId, req.body);
-      req.session.email = updatedUser.email;
-      res.json(updatedUser);
+      const { avatarUrl, ...rest } = val.data;
+      const updatedUser = await storage.updateUser(req.session.userId, {
+        ...rest,
+        ...(avatarUrl !== undefined ? { avatarUrl: avatarUrl || null } : {}),
+      });
+      res.json(toPublicUser(updatedUser));
     } catch { res.status(500).json({ message: "Error" }); }
   });
   app.get('/api/users/me/bookmarks', async (req, res) => {
@@ -137,8 +199,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/gym/settings', async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
-      const { isGymPublic, gender } = req.body;
-      res.json(await storage.updateGymSettings(req.session.userId, isGymPublic, gender));
+      const val = gymSettingsSchema.safeParse(req.body);
+      if (!val.success) return res.status(400).json(val.error);
+      res.json(toPublicUser(await storage.updateGymSettings(req.session.userId, val.data.isGymPublic, val.data.gender)));
     } catch (error) {
       res.status(500).json({ message: "Error actualizando configuración" });
     }
@@ -152,13 +215,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ message: "Error buscando el gimnasio del usuario" });
     }
-  });
-
-  // Ruta pública para ver el gym de otro usuario (si lo permite)
-  app.get('/api/gym/user/:userId', async (req, res) => {
-    const result = await storage.getPublicGymLogs(req.params.userId);
-    if ('message' in result) return res.status(403).json(result);
-    res.json(result);
   });
 
   // --- Global Travel Dashboard (Viajes) ---
@@ -251,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // --- Auth ---
-  app.post('/api/auth/register', async (req, res) => {
+  app.post('/api/auth/register', authLimiter, async (req, res) => {
     const val = registerSchema.safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
     
@@ -265,26 +321,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       username: val.data.username 
     });
 
-    req.session.userId = newUser.id;
-    req.session.email = newUser.email;
-    req.session.role = newUser.role;
-
-    res.status(201).json({ user: newUser });
+    await startSession(req, newUser);
+    res.status(201).json({ user: toPublicUser(newUser) });
   });
 
-  app.post('/api/auth/login', async (req, res) => {
+  app.post('/api/auth/login', authLimiter, async (req, res) => {
     const val = loginSchema.safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
     const user = await storage.getUserByEmail(val.data.email);
     if (!user || !(await bcrypt.compare(val.data.password, user.password_hash))) return res.status(401).json({ message: "Error" });
-    req.session.userId = user.id; req.session.email = user.email; req.session.role = user.role;
-    res.json({ message: "Login", user });
+    await startSession(req, user);
+    res.json({ message: "Login", user: toPublicUser(user) });
   });
   app.post('/api/auth/logout', (req, res) => { req.session.destroy(() => res.json({ message: "Cerrado" })); });
   app.get('/api/auth/me', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ user: null });
     const user = await storage.getUserById(req.session.userId);
-    res.json({ user });
+    res.json({ user: user ? toPublicUser(user) : null });
   });
 
   return createServer(app);

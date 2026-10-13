@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import type { Request, Response as ExpressResponse } from 'express';
+import { randomBytes } from 'crypto';
+import { catchAsyncErrors } from './asyncErrors';
 
 type FetchResponse = Awaited<ReturnType<typeof fetch>>;
 
@@ -8,10 +10,12 @@ declare module 'express-session' {
     spotify_access_token?: string;
     spotify_refresh_token?: string;
     spotify_token_expires?: number;
+    spotify_oauth_state?: string;
   }
 }
 
 const router = Router();
+catchAsyncErrors(router);
 
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || '';
@@ -78,11 +82,15 @@ async function refreshAccessToken(refreshToken: string) {
 // --- AUTH ROUTES ---
 
 // Step 1: Redirect user to Spotify login
-router.get('/login', (_req: Request, res: ExpressResponse) => {
+router.get('/login', (req: Request, res: ExpressResponse) => {
   if (!CLIENT_ID) {
     return res.status(500).json({ error: 'SPOTIFY_CLIENT_ID not configured' });
   }
+  // `state` anti-CSRF: impide que un tercero vincule su cuenta de Spotify a tu sesión
+  const state = randomBytes(16).toString('hex');
+  req.session.spotify_oauth_state = state;
   const params = new URLSearchParams({
+    state,
     client_id: CLIENT_ID,
     response_type: 'code',
     redirect_uri: REDIRECT_URI,
@@ -94,9 +102,11 @@ router.get('/login', (_req: Request, res: ExpressResponse) => {
 
 // Step 2: Spotify redirects back here with ?code=
 router.get('/callback', async (req: Request, res: ExpressResponse) => {
-  const { code, error } = req.query;
+  const { code, error, state } = req.query;
+  const expectedState = req.session.spotify_oauth_state;
+  delete req.session.spotify_oauth_state;
 
-  if (error || !code) {
+  if (error || !code || !expectedState || state !== expectedState) {
     return res.redirect('/?spotify=error');
   }
 

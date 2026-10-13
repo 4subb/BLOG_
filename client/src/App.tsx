@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { queryClient } from "./lib/queryClient";
@@ -6,25 +7,23 @@ import { Toaster } from "@/components/ui/toaster";
 import AppLayout from "@/components/layout/AppLayout";
 import { pageVariants } from "@/lib/motion";
 
-// --- TUS PÁGINAS ---
-import NotFound from "@/pages/not-found";
-import AcademicProfile from "@/pages/AcademicProfile";
+// --- PÁGINAS ---
+// Home se carga de inmediato (es la entrada habitual); el resto se divide en chunks
+// para que un visitante no descargue, p. ej., el editor Quill del panel de admin.
 import Home from "@/pages/Home";
-import Engineering from "@/pages/Engineering";
-import Sports from "@/pages/Sports";
-import Travel from "@/pages/Travel";
-import Reading from "@/pages/Reading";
-import Gallery from "@/pages/Gallery";
-import PostDetails from "@/pages/PostDetail";
-
-// --- IMPORTANTE: Importamos los archivos ESPECÍFICOS ---
-import LoginPage from "@/pages/Login";     
-import RegisterPage from "@/pages/Register"; 
-
-import DashboardPage from "@/pages/Dashboard";
-import ProfilePage from "@/pages/Profile"; 
-
-import EditPostPage from "@/pages/EditPost";
+const NotFound = lazy(() => import("@/pages/not-found"));
+const AcademicProfile = lazy(() => import("@/pages/AcademicProfile"));
+const Engineering = lazy(() => import("@/pages/Engineering"));
+const Sports = lazy(() => import("@/pages/Sports"));
+const Travel = lazy(() => import("@/pages/Travel"));
+const Reading = lazy(() => import("@/pages/Reading"));
+const Gallery = lazy(() => import("@/pages/Gallery"));
+const PostDetails = lazy(() => import("@/pages/PostDetail"));
+const LoginPage = lazy(() => import("@/pages/Login"));
+const RegisterPage = lazy(() => import("@/pages/Register"));
+const DashboardPage = lazy(() => import("@/pages/Dashboard"));
+const ProfilePage = lazy(() => import("@/pages/Profile"));
+const EditPostPage = lazy(() => import("@/pages/EditPost"));
 
 function Router({ location }: { location: string }) {
   return (
@@ -78,7 +77,9 @@ function App() {
               exit="exit"
               className="flex flex-1 flex-col"
             >
-              <Router location={location} />
+              <Suspense fallback={<div className="flex-1" />}>
+                <Router location={location} />
+              </Suspense>
             </motion.div>
           </AnimatePresence>
         </AppLayout>

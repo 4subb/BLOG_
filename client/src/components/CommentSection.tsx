@@ -54,7 +54,7 @@ export default function CommentSection({ postId }: { postId: string }) {
         const savedComment = await res.json();
         const commentWithAuthor = { 
             ...savedComment, 
-            author: user?.email || "Yo" 
+            author: user?.username || user?.email?.split("@")[0] || "Yo" 
         };
         setComments([commentWithAuthor, ...comments]);
         setNewComment("");
