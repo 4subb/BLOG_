@@ -3,6 +3,7 @@ import AuthShell from "@/components/layout/AuthShell";
 import { useAuth } from '../context/AuthContext';
 import React, { useState } from 'react';
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ function LoginPage() {
       await login({ email, password });
       // Si el login funciona, el AuthContext te redirige solo.
     } catch (error: any) {
-      alert("Error: " + (error.message || "Credenciales incorrectas"));
+      toast({ title: "No se pudo iniciar sesión", description: error.message || "Credenciales incorrectas", variant: "destructive" });
     }
   };
 

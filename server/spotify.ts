@@ -2,14 +2,13 @@ import { Router } from 'express';
 import type { Request, Response as ExpressResponse } from 'express';
 import { randomBytes } from 'crypto';
 import { catchAsyncErrors } from './asyncErrors';
+import { storage } from './storage';
+import { encryptSecret, decryptSecret } from './crypto';
 
 type FetchResponse = Awaited<ReturnType<typeof fetch>>;
 
 declare module 'express-session' {
   interface SessionData {
-    spotify_access_token?: string;
-    spotify_refresh_token?: string;
-    spotify_token_expires?: number;
     spotify_oauth_state?: string;
   }
 }
@@ -34,21 +33,76 @@ const SCOPES = [
   'playlist-read-collaborative',
 ].join(' ');
 
-// Helper: call Spotify API with auto token refresh
-async function spotifyFetch(req: Request, path: string, options: RequestInit = {}): Promise<FetchResponse | null> {
-  let token = req.session.spotify_access_token;
-  const expires = req.session.spotify_token_expires || 0;
+// ── Tokens persistentes ─────────────────────────────────────────────
+// La conexión con Spotify vive en BD (tabla spotify_tokens), no en la sesión: se conecta una vez
+// y sigue conectada en cualquier dispositivo y tras cerrar sesión, hasta pulsar "Desconectar"
+// o revocar el acceso desde la cuenta de Spotify.
 
-  // Refresh token if expired
-  if (Date.now() > expires - 30_000 && req.session.spotify_refresh_token) {
-    const refreshed = await refreshAccessToken(req.session.spotify_refresh_token);
-    if (refreshed) {
-      req.session.spotify_access_token = refreshed.access_token;
-      req.session.spotify_token_expires = Date.now() + refreshed.expires_in * 1000;
-      token = refreshed.access_token;
+type TokenResponse = { access_token: string; expires_in: number; refresh_token?: string };
+
+async function requestToken(params: Record<string, string>): Promise<{ ok: true; data: TokenResponse } | { ok: false; revoked: boolean }> {
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`,
+    },
+    body: new URLSearchParams(params),
+  });
+  if (res.ok) return { ok: true, data: (await res.json()) as TokenResponse };
+  const body = await res.text();
+  console.error('Spotify token error:', res.status, body.slice(0, 200));
+  // invalid_grant = el usuario revocó el acceso (o el refresh token ya no es válido)
+  return { ok: false, revoked: body.includes('invalid_grant') };
+}
+
+async function saveTokens(userId: string, accessToken: string, refreshToken: string, expiresIn: number) {
+  await storage.upsertSpotifyToken({
+    userId,
+    accessToken: encryptSecret(accessToken),
+    refreshToken: encryptSecret(refreshToken),
+    expiresAt: new Date(Date.now() + expiresIn * 1000),
+  });
+}
+
+// Evita refrescos simultáneos del mismo usuario (el reproductor hace polling)
+const refreshing = new Map<string, Promise<string | null>>();
+
+async function getAccessToken(userId: string): Promise<string | null> {
+  const row = await storage.getSpotifyToken(userId);
+  if (!row) return null;
+
+  const accessToken = decryptSecret(row.accessToken);
+  if (accessToken && row.expiresAt.getTime() - 60_000 > Date.now()) return accessToken;
+
+  const pending = refreshing.get(userId);
+  if (pending) return pending;
+
+  const task = (async () => {
+    const refreshToken = decryptSecret(row.refreshToken);
+    if (!refreshToken) {
+      // No se puede descifrar (p. ej. cambió SESSION_SECRET): hay que reconectar
+      await storage.deleteSpotifyToken(userId);
+      return null;
     }
-  }
+    const result = await requestToken({ grant_type: 'refresh_token', refresh_token: refreshToken });
+    if (!result.ok) {
+      if (result.revoked) await storage.deleteSpotifyToken(userId);
+      return null;
+    }
+    // Spotify a veces rota el refresh token: si llega uno nuevo, se guarda
+    await saveTokens(userId, result.data.access_token, result.data.refresh_token || refreshToken, result.data.expires_in);
+    return result.data.access_token;
+  })().finally(() => refreshing.delete(userId));
 
+  refreshing.set(userId, task);
+  return task;
+}
+
+// Helper: llamada a la API de Spotify con el token del usuario logueado
+async function spotifyFetch(req: Request, path: string, options: RequestInit = {}): Promise<FetchResponse | null> {
+  if (!req.session.userId) return null;
+  const token = await getAccessToken(req.session.userId);
   if (!token) return null;
 
   return fetch(`https://api.spotify.com/v1${path}`, {
@@ -61,30 +115,13 @@ async function spotifyFetch(req: Request, path: string, options: RequestInit = {
   }) as unknown as Response;
 }
 
-async function refreshAccessToken(refreshToken: string) {
-  const body = new URLSearchParams({
-    grant_type: 'refresh_token',
-    refresh_token: refreshToken,
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-  });
-
-  const res = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-  });
-
-  if (!res.ok) return null;
-  return res.json() as Promise<{ access_token: string; expires_in: number }>;
-}
-
 // --- AUTH ROUTES ---
 
-// Step 1: Redirect user to Spotify login
+// Paso 1: redirigir a Spotify (requiere estar logueado en el blog)
 router.get('/login', (req: Request, res: ExpressResponse) => {
-  if (!CLIENT_ID) {
-    return res.status(500).json({ error: 'SPOTIFY_CLIENT_ID not configured' });
+  if (!req.session.userId) return res.redirect('/login');
+  if (!CLIENT_ID || !CLIENT_SECRET) {
+    return res.status(500).json({ error: 'Spotify no está configurado en el servidor' });
   }
   // `state` anti-CSRF: impide que un tercero vincule su cuenta de Spotify a tu sesión
   const state = randomBytes(16).toString('hex');
@@ -97,88 +134,45 @@ router.get('/login', (req: Request, res: ExpressResponse) => {
     scope: SCOPES,
     show_dialog: 'false',
   });
-  res.redirect(`https://accounts.spotify.com/authorize?${params}`);
+  req.session.save(() => res.redirect(`https://accounts.spotify.com/authorize?${params}`));
 });
 
-// Step 2: Spotify redirects back here with ?code=
+// Paso 2: Spotify vuelve aquí con ?code=
 router.get('/callback', async (req: Request, res: ExpressResponse) => {
   const { code, error, state } = req.query;
   const expectedState = req.session.spotify_oauth_state;
   delete req.session.spotify_oauth_state;
 
-  if (error || !code || !expectedState || state !== expectedState) {
+  const userId = req.session.userId;
+  if (!userId || error || typeof code !== 'string' || !expectedState || state !== expectedState) {
     return res.redirect('/?spotify=error');
   }
 
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    code: code as string,
-    redirect_uri: REDIRECT_URI,
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-  });
+  const result = await requestToken({ grant_type: 'authorization_code', code, redirect_uri: REDIRECT_URI });
+  if (!result.ok || !result.data.refresh_token) return res.redirect('/?spotify=error');
 
-  try {
-    const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
-    });
-
-    if (!tokenRes.ok) {
-      console.error('Spotify token exchange failed:', await tokenRes.text());
-      return res.redirect('/?spotify=error');
-    }
-
-    const data = await tokenRes.json() as {
-      access_token: string;
-      refresh_token: string;
-      expires_in: number;
-    };
-
-    req.session.spotify_access_token = data.access_token;
-    req.session.spotify_refresh_token = data.refresh_token;
-    req.session.spotify_token_expires = Date.now() + data.expires_in * 1000;
-
-    await new Promise<void>((resolve, reject) => req.session.save(err => err ? reject(err) : resolve()));
-    res.redirect('/?spotify=connected');
-  } catch (err) {
-    console.error('Spotify callback error:', err);
-    res.redirect('/?spotify=error');
-  }
+  await saveTokens(userId, result.data.access_token, result.data.refresh_token, result.data.expires_in);
+  res.redirect('/?spotify=connected');
 });
 
-// Disconnect / logout
-router.post('/logout', (req: Request, res: ExpressResponse) => {
-  delete req.session.spotify_access_token;
-  delete req.session.spotify_refresh_token;
-  delete req.session.spotify_token_expires;
-  req.session.save(() => res.json({ ok: true }));
+// Desconectar: borra los tokens guardados
+router.post('/logout', async (req: Request, res: ExpressResponse) => {
+  if (req.session.userId) await storage.deleteSpotifyToken(req.session.userId);
+  res.json({ ok: true });
 });
 
 // --- STATUS / USER ---
 
-router.get('/status', (req: Request, res: ExpressResponse) => {
-  const connected = !!req.session.spotify_access_token;
+router.get('/status', async (req: Request, res: ExpressResponse) => {
+  const connected = !!req.session.userId && !!(await storage.getSpotifyToken(req.session.userId));
   res.json({ connected });
 });
 
-// Return access token for Web Playback SDK (only when authenticated)
+// Token de acceso para el Web Playback SDK
 router.get('/token', async (req: Request, res: ExpressResponse) => {
-  if (!req.session.spotify_access_token) return res.status(401).json({ error: 'Not authenticated' });
-
-  // Auto-refresh if needed
-  const expires = req.session.spotify_token_expires || 0;
-  if (Date.now() > expires - 30_000 && req.session.spotify_refresh_token) {
-    const refreshed = await refreshAccessToken(req.session.spotify_refresh_token);
-    if (refreshed) {
-      req.session.spotify_access_token = refreshed.access_token;
-      req.session.spotify_token_expires = Date.now() + refreshed.expires_in * 1000;
-      await new Promise<void>((resolve, reject) => req.session.save(err => err ? reject(err) : resolve()));
-    }
-  }
-
-  res.json({ access_token: req.session.spotify_access_token });
+  const token = req.session.userId ? await getAccessToken(req.session.userId) : null;
+  if (!token) return res.status(401).json({ error: 'Not authenticated' });
+  res.json({ access_token: token });
 });
 
 router.get('/me', async (req: Request, res: ExpressResponse) => {

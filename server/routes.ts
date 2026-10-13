@@ -42,7 +42,12 @@ const createEventSchema = z.object({
 // Campos que el propio usuario puede editar de su perfil (nunca role, email, password_hash, id...)
 const updateProfileSchema = z.object({
   username: z.string().trim().min(3).max(40).optional(),
-  avatarUrl: z.string().trim().url().max(2048).or(z.literal("")).optional(),
+  // URL https o imagen embebida (el cliente la reduce a 256px, ~30 KB); tope de ~1 MB
+  avatarUrl: z.union([
+    z.string().trim().url().max(2048).refine((u) => u.startsWith("https://"), "Solo URLs https"),
+    z.string().regex(/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/).max(1_400_000),
+    z.literal(""),
+  ]).optional(),
 }).strict();
 
 const updateRoleSchema = z.object({ role: z.enum(['admin', 'user']) });

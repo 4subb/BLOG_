@@ -18,8 +18,6 @@ app.use(helmet({
   contentSecurityPolicy: false, 
 }));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // CORS: en producción frontend y API comparten origen, así que solo abrimos el dev server de Vite.
 if (process.env.NODE_ENV !== "production") {
@@ -52,6 +50,14 @@ app.use(session({
     sameSite: "lax",
   }
 }));
+
+// Body parsers (después de la sesión para conocer el rol).
+// Los admins publican posts con imágenes incrustadas por Quill (base64) → límite amplio.
+// El resto solo envía JSON pequeño (comentarios, perfil con avatar ya reducido) → 2 MB.
+const adminJson = express.json({ limit: '50mb' });
+const userJson = express.json({ limit: '2mb' });
+app.use((req, res, next) => (req.session?.role === 'admin' ? adminJson : userJson)(req, res, next));
+app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 
 // --- LOGGING (Sin cambios) ---
 app.use((req, res, next) => {

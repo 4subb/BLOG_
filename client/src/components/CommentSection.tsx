@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
 import { UserCircle2, Trash2 } from "lucide-react"; // Importamos un icono de basura
+import { toast } from "@/hooks/use-toast";
 
 interface CommentData {
   id: string;
@@ -61,7 +62,7 @@ export default function CommentSection({ postId }: { postId: string }) {
       }
     } catch (error) {
       console.error("Error enviando comentario:", error);
-      alert("No se pudo enviar el comentario.");
+      toast({ title: "No se pudo enviar el comentario", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -90,11 +91,11 @@ export default function CommentSection({ postId }: { postId: string }) {
       } else {
         // El backend nos dijo que no (ej. 403, 404)
         const data = await res.json();
-        alert(`Error al borrar: ${data.message}`);
+        toast({ title: "Error al borrar", description: data.message, variant: "destructive" });
       }
     } catch (error) {
       console.error("Error de red al borrar:", error);
-      alert("No se pudo borrar el comentario.");
+      toast({ title: "No se pudo borrar el comentario", variant: "destructive" });
     }
   };
 

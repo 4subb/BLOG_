@@ -88,6 +88,18 @@ export const gymLogs = pgTable("gym_logs", {
   notes: text("notes"),
 });
 
+// --- Spotify: conexión persistente por usuario ---
+// Los tokens se guardan cifrados (server/crypto.ts). Borrar la fila = desconectar.
+export const spotifyTokens = pgTable("spotify_tokens", {
+  userId: varchar('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  refreshToken: text("refresh_token").notNull(),
+  accessToken: text("access_token").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type SpotifyToken = typeof spotifyTokens.$inferSelect;
+
 // --- Tablas de Viajes (Global Travel Dashboard) ---
 export const visitedPlaces = pgTable("visited_places", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

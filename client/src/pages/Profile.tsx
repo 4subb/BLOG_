@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type Post } from "@shared/schema";
 import { Camera, Upload } from "lucide-react"; // Iconos nuevos
+import { toast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -44,23 +45,37 @@ export default function ProfilePage() {
     }
   }, [isAuthenticated]);
 
-  // --- NUEVA LÓGICA: Convertir imagen a Base64 ---
+  // Reduce la imagen a 256x256 (recorte centrado) antes de guardarla como data URL:
+  // el avatar se pinta en el header y en cada comentario, no necesita más resolución.
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validar tamaño (máx 5MB para no saturar la base de datos)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("La imagen es muy pesada. Máximo 5MB.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        // El resultado es una cadena larga: "data:image/png;base64,iVBORw..."
-        setAvatarUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Selecciona un archivo de imagen", variant: "destructive" });
+      return;
     }
+    if (file.size > 15 * 1024 * 1024) {
+      toast({ title: "La imagen es muy pesada", description: "Máximo 15 MB.", variant: "destructive" });
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const size = 256;
+      const side = Math.min(img.width, img.height);
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      canvas.getContext("2d")!.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+      setAvatarUrl(canvas.toDataURL("image/jpeg", 0.85));
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      toast({ title: "No se pudo leer la imagen", variant: "destructive" });
+    };
+    img.src = url;
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -73,10 +88,10 @@ export default function ProfilePage() {
         body: JSON.stringify({ username, avatarUrl }),
       });
       if (res.ok) {
-        alert("Perfil actualizado correctamente.");
+        toast({ title: "Perfil actualizado" });
         window.location.reload(); 
       } else {
-        alert("Error al guardar.");
+        toast({ title: "No se pudo guardar el perfil", variant: "destructive" });
       }
     } catch (error) {
       console.error(error);

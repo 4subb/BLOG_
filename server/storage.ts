@@ -4,7 +4,8 @@ import {
   type InsertPost, posts, type Post, postCategoryEnum,
   comments, type Comment, type InsertComment,
   postLikes, savedPosts,
-  appRankings, appSchedule, type AppRanking, type InsertAppRanking, type AppEvent, type InsertAppEvent, gymLogs, type GymLog, type InsertGymLog
+  appRankings, appSchedule, type AppRanking, type InsertAppRanking, type AppEvent, type InsertAppEvent, gymLogs, type GymLog, type InsertGymLog,
+  spotifyTokens, type SpotifyToken
 } from "@shared/schema";
 import { db } from "./db"; 
 import { eq, sql, desc, and, ne, lt, gt, asc } from "drizzle-orm"; 
@@ -55,6 +56,11 @@ export interface IStorage {
   createGymLog(userId: string, log: InsertGymLog): Promise<GymLog>;
   getPublicGymLogs(userId: string): Promise<GymLog[] | { message: string }>;
   updateGymSettings(userId: string, isPublic: boolean, gender: string): Promise<User>;
+
+  // Spotify (tokens ya cifrados por el llamador)
+  getSpotifyToken(userId: string): Promise<SpotifyToken | undefined>;
+  upsertSpotifyToken(token: Omit<SpotifyToken, 'updatedAt'>): Promise<void>;
+  deleteSpotifyToken(userId: string): Promise<void>;
 }
 
 export class DrizzleStorage implements IStorage {
@@ -148,5 +154,22 @@ export class DrizzleStorage implements IStorage {
     return newItem;
   }
 
+
+  // --- Spotify ---
+  async getSpotifyToken(userId: string): Promise<SpotifyToken | undefined> {
+    const [row] = await db.select().from(spotifyTokens).where(eq(spotifyTokens.userId, userId)).limit(1);
+    return row;
+  }
+
+  async upsertSpotifyToken(token: Omit<SpotifyToken, 'updatedAt'>): Promise<void> {
+    await db.insert(spotifyTokens).values(token).onConflictDoUpdate({
+      target: spotifyTokens.userId,
+      set: { refreshToken: token.refreshToken, accessToken: token.accessToken, expiresAt: token.expiresAt, updatedAt: new Date() },
+    });
+  }
+
+  async deleteSpotifyToken(userId: string): Promise<void> {
+    await db.delete(spotifyTokens).where(eq(spotifyTokens.userId, userId));
+  }
 }
 export const storage = new DrizzleStorage();

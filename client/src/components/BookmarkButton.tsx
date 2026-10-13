@@ -3,6 +3,7 @@ import { Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
+import { toast } from "@/hooks/use-toast";
 
 export default function BookmarkButton({ postId }: { postId: string }) {
   const { isAuthenticated } = useAuth();
@@ -18,7 +19,7 @@ export default function BookmarkButton({ postId }: { postId: string }) {
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    if (!isAuthenticated) { alert("Inicia sesión para guardar posts"); return; }
+    if (!isAuthenticated) { toast({ title: "Inicia sesión para guardar posts" }); return; }
 
     setIsSaved(!isSaved); // Optimistic update
     try {

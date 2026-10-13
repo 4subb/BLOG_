@@ -5,6 +5,7 @@ import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion"; // ¡Para la animación!
+import { toast } from "@/hooks/use-toast";
 
 interface LikeButtonProps {
   postId: string;
@@ -48,7 +49,7 @@ export default function LikeButton({ postId }: LikeButtonProps) {
     e.preventDefault(); // Evita que el Link navegue
     e.stopPropagation(); // Evita que el clic suba a la tarjeta
     if (!isAuthenticated) {
-      alert("Debes iniciar sesión para dar Me Gusta");
+      toast({ title: "Inicia sesión para dar Me gusta" });
       return;
     }
 

@@ -556,13 +556,14 @@ export function SpotifyPlayer() {
               )}
               <button
                 onClick={async () => {
+                  if (!window.confirm('¿Desconectar tu cuenta de Spotify? Tendrás que volver a vincularla.')) return;
                   sdkPlayerRef.current?.disconnect();
                   await api('/logout', 'POST');
                   setConnected(false); setState(null); setOpen(false); setSdkReady(false); setDeviceId(null);
                 }}
                 className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
               >
-                <LogOut className="w-3.5 h-3.5" /> Salir
+                <LogOut className="w-3.5 h-3.5" /> Desconectar
               </button>
             </div>
           </motion.div>
