@@ -1,10 +1,13 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowUpRight, MapPin } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import LikeButton from "./LikeButton";
 import BookmarkButton from "./BookmarkButton";
+import { useScramble } from "@/components/mission/primitives";
 import { cn } from "@/lib/utils";
-import { hoverLift } from "@/lib/motion";
+import { easeOutExpo } from "@/lib/motion";
+import { dotDate } from "@/lib/posts";
 
 interface PostCardProps {
   id: string;
@@ -16,82 +19,77 @@ interface PostCardProps {
   createdAt?: Date;
   date?: string;
   excerpt?: string;
+  readMinutes?: number;
+  index?: number;
   tags?: string[] | null;
   className?: string;
-  // "grid": tarjeta vertical (rejillas). "list": horizontal en desktop (listados de lectura).
+  // "grid": tarjeta vertical. "list": horizontal en desktop.
   layout?: "grid" | "list";
   [key: string]: any;
 }
 
+/** Tarjeta de entrada estilo "hoja de progreso": imagen recta que se destapa, meta mono y título. */
 export default function PostCard({
-  id, title, content, category, createdAt, imageUrl, country, className, date, excerpt, layout = "grid",
+  id, title, content, category, createdAt, imageUrl, country, className, excerpt, readMinutes, index, layout = "grid",
 }: PostCardProps) {
+  const { t } = useTranslation();
+  const [readLabel, playRead] = useScramble(`${t("ui.read")} →`.toUpperCase());
 
-  const finalExcerpt = excerpt || (content ? content.replace(/<[^>]*>?/gm, '').substring(0, 120) + "..." : "");
-  const finalDate = date || (createdAt ? new Date(createdAt).toLocaleDateString() : "");
+  const finalExcerpt = excerpt || (content ? content.replace(/<[^>]*>?/gm, "").substring(0, 140) + "…" : "");
   const isList = layout === "list";
 
   return (
-    <Link href={`/post/${id}`} className="block h-full rounded-xl focus-visible:outline-none">
-      <motion.article
-        {...hoverLift}
-        className={cn(
-          "group relative flex h-full overflow-hidden rounded-xl border border-border/70 bg-card",
-          "transition-[border-color,box-shadow] duration-300 hover:border-foreground/15 hover:shadow-lg",
-          isList ? "flex-col sm:flex-row" : "flex-col",
-          className,
-        )}
-      >
-        {imageUrl && (
-          <div
-            className={cn(
-              "relative shrink-0 overflow-hidden bg-muted",
-              isList ? "aspect-[16/9] sm:aspect-auto sm:w-64 md:w-72" : "aspect-[16/10]",
-            )}
-          >
-            <img
-              src={imageUrl}
-              alt={title}
-              loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.04]"
-            />
+    <Link
+      href={`/post/${id}`}
+      onMouseEnter={playRead}
+      className={cn("group block outline-none", isList && "sm:grid sm:grid-cols-12 sm:gap-8", className)}
+    >
+      <div className={cn("relative overflow-hidden bg-muted", isList ? "aspect-[4/3] sm:col-span-5" : "aspect-[4/3]")}>
+        {imageUrl ? (
+          <motion.img
+            src={imageUrl}
+            alt={title}
+            loading="lazy"
+            initial={{ clipPath: "inset(100% 0% 0% 0%)", scale: 1.15 }}
+            whileInView={{ clipPath: "inset(0% 0% 0% 0%)", scale: 1 }}
+            viewport={{ once: true, amount: 0.25 }}
+            transition={{ duration: 1.2, ease: easeOutExpo }}
+            className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out-expo group-hover:!scale-[1.05]"
+          />
+        ) : (
+          // Sin imagen: panel tipográfico con el índice en grande
+          <div className="flex h-full w-full items-end justify-between p-5">
+            <span className="font-display text-[7rem] leading-[0.75] text-background/70 mix-blend-normal">
+              {String(index ?? 0).padStart(2, "0")}
+            </span>
+            <ArrowUpRight className="h-6 w-6 text-muted-foreground" />
           </div>
         )}
+        <span className="label-mono absolute left-3 top-3 bg-background/90 px-2 py-1.5 text-foreground backdrop-blur">
+          {category}
+        </span>
+      </div>
 
-        <div className="flex flex-1 flex-col p-5 sm:p-6">
-          <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="font-mono uppercase tracking-[0.1em] text-foreground/80">{category}</span>
-            {finalDate && (
-              <>
-                <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/60" />
-                <time>{finalDate}</time>
-              </>
-            )}
-            {country && (
-              <>
-                <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/60" />
-                <span className="flex max-w-[110px] items-center gap-1 truncate">
-                  <MapPin className="h-3 w-3 shrink-0" /> {country}
-                </span>
-              </>
-            )}
-          </div>
+      <div className={cn("pt-5", isList && "sm:col-span-7 sm:pt-0")}>
+        <div className="label-mono flex items-center gap-3 text-muted-foreground">
+          {createdAt && <time>{dotDate(createdAt)}</time>}
+          {readMinutes && <span>· {readMinutes} {t("ui.minRead")}</span>}
+          {country && <span className="truncate">· {country}</span>}
+        </div>
+        <h3 className={cn("mt-3 font-medium leading-[1.1] tracking-[-0.02em] transition-colors group-hover:text-signal", isList ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl")}>
+          {title}
+        </h3>
+        {finalExcerpt && <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{finalExcerpt}</p>}
 
-          <h3 className="mb-2 flex items-start justify-between gap-3 text-lg font-semibold leading-snug tracking-tight">
-            <span className="line-clamp-2">{title}</span>
-            <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 -translate-x-1 translate-y-1 text-muted-foreground opacity-0 transition-all duration-300 ease-out-expo group-hover:translate-x-0 group-hover:translate-y-0 group-hover:opacity-100" />
-          </h3>
-          <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{finalExcerpt}</p>
-
-          <div className="mt-auto flex items-center justify-end gap-0.5 pt-5">
-            {/* Los botones hacen preventDefault/stopPropagation para no disparar el Link */}
-            <div onClick={(e) => e.stopPropagation()} className="flex items-center">
-              <LikeButton postId={id} />
-              <BookmarkButton postId={id} />
-            </div>
+        <div className="mt-5 flex items-center justify-between border-t border-rock/40 pt-3">
+          <span className="label-mono text-foreground" aria-hidden>{readLabel}</span>
+          {/* Los botones hacen preventDefault/stopPropagation para no disparar el Link */}
+          <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+            <LikeButton postId={id} />
+            <BookmarkButton postId={id} />
           </div>
         </div>
-      </motion.article>
+      </div>
     </Link>
   );
 }
@@ -99,13 +97,12 @@ export default function PostCard({
 export function PostCardSkeleton({ layout = "grid" }: { layout?: "grid" | "list" }) {
   const isList = layout === "list";
   return (
-    <div className={cn("flex overflow-hidden rounded-xl border border-border/70 bg-card", isList ? "flex-col sm:flex-row" : "flex-col")}>
-      <div className={cn("animate-pulse bg-muted", isList ? "aspect-[16/9] sm:aspect-auto sm:h-auto sm:w-64 md:w-72" : "aspect-[16/10]")} />
-      <div className="flex-1 space-y-3 p-6">
-        <div className="h-3 w-24 animate-pulse rounded bg-muted" />
-        <div className="h-5 w-4/5 animate-pulse rounded bg-muted" />
-        <div className="h-3 w-full animate-pulse rounded bg-muted" />
-        <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+    <div className={cn(isList && "sm:grid sm:grid-cols-12 sm:gap-8")}>
+      <div className={cn("aspect-[4/3] animate-pulse bg-muted", isList && "sm:col-span-5")} />
+      <div className={cn("space-y-3 pt-5", isList && "sm:col-span-7 sm:pt-0")}>
+        <div className="h-2.5 w-28 animate-pulse bg-muted" />
+        <div className="h-6 w-4/5 animate-pulse bg-muted" />
+        <div className="h-3 w-full animate-pulse bg-muted" />
       </div>
     </div>
   );

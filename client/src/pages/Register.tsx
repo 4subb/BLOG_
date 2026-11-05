@@ -72,8 +72,8 @@ function RegisterPage() {
   return (
     <AuthShell>
         
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold tracking-[-0.03em] text-foreground">Crear Cuenta</h2>
+        <div>
+          <h2 className="font-display text-4xl text-foreground">Crear Cuenta</h2>
           <p className="mt-2 text-sm text-muted-foreground">Únete a nuestra comunidad</p>
         </div>
 
@@ -186,7 +186,7 @@ function RegisterPage() {
           <button 
             type="submit" 
             disabled={isLoading}
-            className="w-full h-10 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-[background-color,transform] duration-200 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
+            className="w-full h-10 px-4 border border-transparent rounded-full text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-[background-color,transform] duration-200 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
           >
             {isLoading ? "Creando cuenta..." : "Registrarse"}
           </button>

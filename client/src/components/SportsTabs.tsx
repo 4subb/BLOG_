@@ -46,7 +46,7 @@ export default function SportsTabs({ onDateSelect }: SportsTabsProps) {
     <div className="space-y-3">
       {sportEvents.length === 0 ? <p className="text-sm text-muted-foreground">Sin eventos próximos.</p> :
         sportEvents.map((event) => (
-          <div key={event.id} className="flex justify-between items-start p-3 rounded-md bg-muted/50 hover-elevate transition-all">
+          <div key={event.id} className="flex justify-between items-start border-t border-rock/40 py-3 transition-colors hover:text-signal">
             <div>
               <p className="font-medium text-sm">{event.eventName}</p>
               {event.location && <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><MapPin className="h-3 w-3" /> {event.location}</p>}
@@ -73,7 +73,7 @@ export default function SportsTabs({ onDateSelect }: SportsTabsProps) {
   const renderRankings = (sportRankings: Ranking[], type: 'pilotos' | 'atletas') => (
      <div className="space-y-2">
         {sportRankings.map((r) => (
-          <div key={r.id} className="flex items-center justify-between p-3 rounded-md hover-elevate">
+          <div key={r.id} className="flex items-center justify-between border-t border-rock/40 py-3">
             <div className="flex items-center gap-3">
               <Badge variant={r.rank === 1 ? "default" : "secondary"} className="w-8 h-8 flex items-center justify-center rounded-full">{r.rank}</Badge>
               <div className="flex flex-col">
@@ -97,22 +97,22 @@ export default function SportsTabs({ onDateSelect }: SportsTabsProps) {
 
       <TabsContent value="ciclismo" className="mt-6">
         <div className="grid md:grid-cols-2 gap-6">
-          <Card className="p-5"><h3 className="text-lg font-semibold mb-4 flex gap-2"><Calendar className="h-5 w-5" /> Calendario</h3> {renderEventList(events.ciclismo)}</Card>
-          <Card className="p-5"><h3 className="text-lg font-semibold mb-4 flex gap-2"><Trophy className="h-5 w-5" /> Clasificación UCI</h3> {renderRankings(rankings.ciclismo, 'atletas')}</Card>
+          <Card className="p-5"><h3 className="label-mono mb-4 flex items-center gap-2 text-muted-foreground [&_svg]:h-3.5 [&_svg]:w-3.5"><Calendar className="h-5 w-5" /> Calendario</h3> {renderEventList(events.ciclismo)}</Card>
+          <Card className="p-5"><h3 className="label-mono mb-4 flex items-center gap-2 text-muted-foreground [&_svg]:h-3.5 [&_svg]:w-3.5"><Trophy className="h-5 w-5" /> Clasificación UCI</h3> {renderRankings(rankings.ciclismo, 'atletas')}</Card>
         </div>
       </TabsContent>
 
       <TabsContent value="tenis" className="mt-6">
         <div className="grid md:grid-cols-2 gap-6">
-          <Card className="p-5"><h3 className="text-lg font-semibold mb-4 flex gap-2"><Calendar className="h-5 w-5" /> Torneos</h3> {renderEventList(events.tenis)}</Card>
-          <Card className="p-5"><h3 className="text-lg font-semibold mb-4 flex gap-2"><Trophy className="h-5 w-5" /> Ranking ATP</h3> {renderRankings(rankings.tenis, 'atletas')}</Card>
+          <Card className="p-5"><h3 className="label-mono mb-4 flex items-center gap-2 text-muted-foreground [&_svg]:h-3.5 [&_svg]:w-3.5"><Calendar className="h-5 w-5" /> Torneos</h3> {renderEventList(events.tenis)}</Card>
+          <Card className="p-5"><h3 className="label-mono mb-4 flex items-center gap-2 text-muted-foreground [&_svg]:h-3.5 [&_svg]:w-3.5"><Trophy className="h-5 w-5" /> Ranking ATP</h3> {renderRankings(rankings.tenis, 'atletas')}</Card>
         </div>
       </TabsContent>
 
       <TabsContent value="f1" className="mt-6">
         <div className="grid md:grid-cols-2 gap-6">
-          <Card className="p-5"><h3 className="text-lg font-semibold mb-4 flex gap-2"><Calendar className="h-5 w-5" /> Calendario F1</h3> {renderEventList(events.f1)}</Card>
-          <Card className="p-5"><h3 className="text-lg font-semibold mb-4 flex gap-2"><Trophy className="h-5 w-5" /> Clasificación de Pilotos</h3> {renderRankings(rankings.f1, 'pilotos')}</Card>
+          <Card className="p-5"><h3 className="label-mono mb-4 flex items-center gap-2 text-muted-foreground [&_svg]:h-3.5 [&_svg]:w-3.5"><Calendar className="h-5 w-5" /> Calendario F1</h3> {renderEventList(events.f1)}</Card>
+          <Card className="p-5"><h3 className="label-mono mb-4 flex items-center gap-2 text-muted-foreground [&_svg]:h-3.5 [&_svg]:w-3.5"><Trophy className="h-5 w-5" /> Clasificación de Pilotos</h3> {renderRankings(rankings.f1, 'pilotos')}</Card>
         </div>
       </TabsContent>
     </Tabs>

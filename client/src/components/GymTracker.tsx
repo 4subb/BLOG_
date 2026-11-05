@@ -93,7 +93,15 @@ export default function GymTracker() {
   const powerLevel = Math.floor(totalTonnage / 5000) + 1;
   const muscleDensityOpacity = Math.min((powerLevel * 10) + 20, 100); 
 
-  if (!user) return <Card className="p-8 text-center font-mono mt-8 border-destructive text-destructive">SISTEMA BLOQUEADO. REQUIERE AUTENTICACIÓN PARA TRACKING FÍSICO.</Card>;
+  if (!user) return (
+    <div className="flex flex-col items-start justify-between gap-6 border border-dashed border-rock/70 p-8 sm:flex-row sm:items-center">
+      <div>
+        <p className="label-mono flex items-center gap-2 text-signal"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-signal" /> Acceso restringido</p>
+        <p className="mt-3 max-w-md text-muted-foreground">Inicia sesión para registrar tus entrenamientos y ver tu progreso.</p>
+      </div>
+      <a href="/login" className="label-mono inline-flex h-10 items-center rounded-full border border-foreground px-5 transition-colors hover:bg-foreground hover:text-background">Acceso →</a>
+    </div>
+  );
 
   return (
     <Card className="mt-8 font-mono">

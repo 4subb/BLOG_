@@ -52,6 +52,9 @@ export default {
           border: "var(--destructive-border)",
         },
         ring: "hsl(var(--ring) / <alpha-value>)",
+        rock: "hsl(var(--rock) / <alpha-value>)",
+        signal: "hsl(var(--signal) / <alpha-value>)",
+        ghost: "hsl(var(--ghost) / <alpha-value>)",
         chart: {
           "1": "hsl(var(--chart-1) / <alpha-value>)",
           "2": "hsl(var(--chart-2) / <alpha-value>)",
@@ -87,8 +90,17 @@ export default {
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
         heading: ["var(--font-sans)"],
+        display: ["'Archivo'", "system-ui", "sans-serif"],
       },
       keyframes: {
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
+        blink: {
+          "0%, 49%": { opacity: "1" },
+          "50%, 100%": { opacity: "0" },
+        },
         "accordion-down": {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
@@ -102,6 +114,8 @@ export default {
         "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       animation: {
+        marquee: "marquee 40s linear infinite",
+        blink: "blink 1.1s steps(1) infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },

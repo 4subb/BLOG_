@@ -1,3 +1,4 @@
+import PageIntro from "@/components/mission/PageIntro";
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "wouter";
@@ -6,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type Post } from "@shared/schema";
-import { Camera, Upload } from "lucide-react"; // Iconos nuevos
+import { type PostSummary } from "@shared/schema";
+import { Camera, KeyRound, Upload } from "lucide-react"; // Iconos nuevos
 import { toast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
@@ -17,8 +18,14 @@ export default function ProfilePage() {
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [bookmarks, setBookmarks] = useState<Post[]>([]);
+  const [bookmarks, setBookmarks] = useState<PostSummary[]>([]);
   const [loadingBookmarks, setLoadingBookmarks] = useState(false);
+
+  // Cambio de contraseña
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Referencia para el input de archivo oculto
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,11 +107,43 @@ export default function ProfilePage() {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      toast({ title: "La nueva contraseña debe tener al menos 8 caracteres", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Las contraseñas no coinciden", variant: "destructive" });
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const res = await fetch("/api/users/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast({ title: "Contraseña actualizada" });
+        setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+      } else {
+        toast({ title: data.message || "No se pudo cambiar la contraseña", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error de conexión", variant: "destructive" });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   if (isLoading || !user) return null;
 
   return (
     <div className="flex-1">
-      <main className="page-container py-14 sm:py-20">
+      <main className="page-container pb-24 pt-8 sm:pt-10">
+        <PageIntro index="U1" label="Perfil" title={user.username || user.email.split("@")[0]} />
         <div className="flex flex-col md:flex-row gap-8">
           
           {/* COLUMNA IZQUIERDA: Tarjeta de Identidad */}
@@ -170,6 +209,35 @@ export default function ProfilePage() {
 
                   <Button type="submit" className="w-full" disabled={isSaving}>
                     {isSaving ? "Guardando..." : "Actualizar Perfil"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5" /> Seguridad</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="current-password">Contraseña actual</Label>
+                    <Input id="current-password" type="password" autoComplete="current-password" required
+                      value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">Nueva contraseña</Label>
+                    <Input id="new-password" type="password" autoComplete="new-password" required minLength={8}
+                      value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                    <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirmar nueva contraseña</Label>
+                    <Input id="confirm-password" type="password" autoComplete="new-password" required
+                      value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                  </div>
+                  <Button type="submit" variant="outline" className="w-full" disabled={isChangingPassword}>
+                    {isChangingPassword ? "Cambiando..." : "Cambiar contraseña"}
                   </Button>
                 </form>
               </CardContent>

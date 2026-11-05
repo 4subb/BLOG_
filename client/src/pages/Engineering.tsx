@@ -1,80 +1,53 @@
-import { useState, useEffect } from "react";
-import { type Post } from "@shared/schema";
-import PostCard, { PostCardSkeleton } from "@/components/PostCard";
-import RecentPostsSidebar from "@/components/RecentPostsSidebar";
-import PageHeader from "@/components/layout/PageHeader";
-import EmptyState from "@/components/layout/EmptyState";
-import { Stagger, StaggerItem } from "@/components/motion/Stagger";
-import { Code2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import PostCard, { PostCardSkeleton } from "@/components/PostCard";
+import EmptyMission from "@/components/mission/EmptyMission";
+import MissionHero from "@/components/mission/MissionHero";
+import { SectionHead } from "@/components/mission/primitives";
+import { BlueprintSignature } from "@/components/mission/signatures";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
+import { pad, updatedSpec, usePosts } from "@/lib/posts";
 
 export default function Engineering() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
-
-  useEffect(() => {
-    const fetchEngineeringPosts = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch('/api/posts/categoria/ingenieria', {
-          credentials: 'include'
-        });
-        if (!response.ok) throw new Error('Error cargando posts');
-        const data = await response.json();
-        setPosts(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchEngineeringPosts();
-  }, []);
-
-  const viewPosts = posts.map(post => ({
-    ...post,
-    date: new Date(post.createdAt).toLocaleDateString(),
-    excerpt: post.content.replace(/<[^>]*>?/gm, '').substring(0, 100) + "...",
-    imageUrl: post.imageUrl || undefined,
-    country: post.country || undefined,
-    tags: post.tags || []
-  }));
-
-  const recentPosts = viewPosts.slice(0, 3);
+  const { posts, isLoading } = usePosts("ingenieria");
+  const tags = new Set(posts.flatMap((p) => p.tags)).size;
 
   return (
     <>
-      <PageHeader icon={Code2} eyebrow={t('nav.engineering')} title={t('pages.engTitle')} description={t('pages.engSubtitle')} />
+      <MissionHero
+        index="03"
+        label={t("nav.engineering")}
+        title={t("pages.engTitle")}
+        description={t("pages.engSubtitle")}
+        signature={<BlueprintSignature />}
+        loading={isLoading}
+        specs={[
+          { label: t("ui.entries"), value: posts.length, pad: 3 },
+          { label: t("ui.tags"), value: tags, pad: 2 },
+          updatedSpec(t("ui.updated"), posts[0]?.createdAt),
+          { label: t("ui.minRead"), value: posts.reduce((n, p) => n + p.readMinutes, 0), pad: 2 },
+        ]}
+        ghost="Blueprint"
+      />
 
-      <section className="page-container py-14 sm:py-20">
-        <div className="flex gap-12">
-          <div className="min-w-0 flex-1">
-            {isLoading ? (
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                {[0, 1, 2, 3].map((i) => <PostCardSkeleton key={i} />)}
-              </div>
-            ) : viewPosts.length === 0 ? (
-              <EmptyState icon={Code2} text="No hay posts todavía." />
-            ) : (
-              <Stagger className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                {viewPosts.map((post) => (
-                  <StaggerItem key={post.id}>
-                    <PostCard {...post} />
-                  </StaggerItem>
-                ))}
-              </Stagger>
-            )}
+      <section className="page-container py-20 sm:py-28">
+        <SectionHead index="01" title={t("ui.latest")} aside={`${pad(posts.length, 3)} ${t("ui.entries")}`} className="mb-12" />
+        {isLoading ? (
+          <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => <PostCardSkeleton key={i} />)}
           </div>
-
-          <aside className="hidden w-72 shrink-0 lg:block">
-            <div className="sticky top-24">
-              <RecentPostsSidebar posts={recentPosts} />
-            </div>
-          </aside>
-        </div>
+        ) : posts.length === 0 ? (
+          <EmptyMission />
+        ) : (
+          <Stagger className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+            {posts.map((post, i) => (
+              <StaggerItem key={post.id}>
+                <PostCard {...post} index={i + 1} />
+              </StaggerItem>
+            ))}
+          </Stagger>
+        )}
       </section>
     </>
   );
 }
-

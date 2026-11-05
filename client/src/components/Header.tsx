@@ -18,12 +18,12 @@ import LanguageToggle from "@/components/LanguageToggle";
 import { SpotifyPlayer } from "@/components/SpotifyPlayer";
 import { cn } from "@/lib/utils";
 import { easeOutExpo, springSoft } from "@/lib/motion";
+import { useScramble } from "@/components/mission/primitives";
 
 export default function Header() {
   const { t } = useTranslation();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [hoveredPath, setHoveredPath] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
   const { user, isAuthenticated, isLoading, logout, isAdmin } = useAuth();
@@ -46,9 +46,6 @@ export default function Header() {
   ];
 
   const isActive = (path: string) => (path === "/" ? location === "/" : location.startsWith(path));
-  const activePath = navItems.find((item) => isActive(item.path))?.path ?? null;
-  // La "píldora" sigue al cursor y vuelve a la ruta activa al salir de la nav.
-  const pillPath = hoveredPath ?? activePath;
 
   const displayName = user?.username || user?.email?.split("@")[0];
   const avatarSrc = user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`;
@@ -61,53 +58,29 @@ export default function Header() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-b transition-[background-color,border-color,box-shadow] duration-300",
+        "sticky top-0 z-50 w-full border-b transition-[background-color,border-color] duration-500",
         scrolled || mobileMenuOpen
-          ? "border-border/70 bg-background/75 shadow-[0_1px_0_0_hsl(var(--foreground)/0.02)] backdrop-blur-xl backdrop-saturate-150"
+          ? "border-rock/40 bg-background/85 backdrop-blur-xl backdrop-saturate-150"
           : "border-transparent bg-background/0",
       )}
     >
       <div className="page-container">
-        <div className="flex h-14 items-center gap-6">
-          {/* Logo */}
-          <Link href="/" className="group flex shrink-0 items-center gap-2.5 rounded-md">
-            <motion.span
-              whileHover={{ rotate: -8, scale: 1.06 }}
-              whileTap={{ scale: 0.92 }}
-              transition={springSoft}
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-[11px] font-semibold tracking-tight text-background"
-            >
-              ÁS
-            </motion.span>
-            <span className="hidden text-sm font-semibold tracking-tight sm:block">Ángel Subías</span>
+        <div className="flex h-16 items-center gap-8">
+          {/* Marca */}
+          <Link href="/" className="group flex shrink-0 items-baseline gap-3">
+            <span className="font-display text-xl leading-none tracking-[-0.03em]">Ángel Subías</span>
+            <span className="label-mono hidden text-muted-foreground transition-colors group-hover:text-signal xl:inline">/ Ing. Mecatrónica</span>
           </Link>
 
           {/* Navegación desktop */}
-          <nav className="hidden items-center lg:flex" onMouseLeave={() => setHoveredPath(null)}>
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                href={item.path}
-                onMouseEnter={() => setHoveredPath(item.path)}
-                className={cn(
-                  "relative rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-200",
-                  isActive(item.path) ? "text-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {pillPath === item.path && (
-                  <motion.span
-                    layoutId="nav-pill"
-                    transition={springSoft}
-                    className="absolute inset-0 -z-10 rounded-md bg-accent"
-                  />
-                )}
-                {item.label}
-              </Link>
+          <nav className="ml-auto hidden items-center gap-1 lg:flex">
+            {navItems.map((item, i) => (
+              <NavItem key={item.path} href={item.path} index={i + 1} label={item.label} active={isActive(item.path)} />
             ))}
           </nav>
 
           {/* Acciones */}
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-1 lg:ml-4 lg:border-l lg:border-rock/40 lg:pl-4">
             <SpotifyPlayer />
             <LanguageToggle />
             <ThemeToggle />
@@ -122,7 +95,7 @@ export default function Header() {
                       whileHover={{ scale: 1.06 }}
                       whileTap={{ scale: 0.94 }}
                       transition={springSoft}
-                      className="h-8 w-8 overflow-hidden rounded-full ring-1 ring-border transition-shadow hover:ring-foreground/30"
+                      className="h-8 w-8 overflow-hidden rounded-full ring-1 ring-rock transition-shadow hover:ring-signal"
                       aria-label="Menú de usuario"
                     >
                       <img src={avatarSrc} alt="Avatar" className="h-full w-full object-cover" />
@@ -153,14 +126,12 @@ export default function Header() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <>
-                  <Link href="/login">
-                    <Button variant="ghost" size="sm">Iniciar sesión</Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button size="sm">Registrarse</Button>
-                  </Link>
-                </>
+                <Link
+                  href="/login"
+                  className="label-mono inline-flex h-9 items-center rounded-full border border-rock px-4 text-foreground transition-colors duration-300 hover:border-foreground hover:bg-foreground hover:text-background"
+                >
+                  {t("ui.signIn")}
+                </Link>
               )}
             </div>
 
@@ -212,17 +183,16 @@ export default function Header() {
                   >
                     <Link
                       href={item.path}
-                      className={cn(
-                        "block rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-                        isActive(item.path) ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-                      )}
+                      className="flex items-baseline gap-4 border-t border-rock/40 py-3"
                     >
-                      {item.label}
+                      <span className="label-mono w-6 text-muted-foreground">{String(navItems.indexOf(item) + 1).padStart(2, "0")}</span>
+                      <span className={cn("font-display text-3xl", isActive(item.path) ? "text-foreground" : "text-muted-foreground")}>{item.label}</span>
+                      {isActive(item.path) && <span className="ml-auto h-2 w-2 self-center rounded-full bg-signal" />}
                     </Link>
                   </motion.div>
                 ))}
 
-                <div className="mt-3 border-t border-border/70 pt-3">
+                <div className="border-t border-rock/40 pt-4">
                   {isLoading ? null : isAuthenticated ? (
                     <div className="flex flex-col gap-0.5">
                       <Link href="/profile" className="flex items-center gap-3 rounded-md px-3 py-2.5 hover:bg-accent/60">
@@ -254,5 +224,27 @@ export default function Header() {
         </AnimatePresence>
       </div>
     </header>
+  );
+}
+
+/** Enlace de navegación: índice mono, punto naranja deslizante en la ruta activa y texto que se descifra al hover. */
+function NavItem({ href, index, label, active }: { href: string; index: number; label: string; active: boolean }) {
+  const [text, play] = useScramble(label.toUpperCase());
+  return (
+    <Link
+      href={href}
+      onMouseEnter={play}
+      onFocus={play}
+      className={cn(
+        "label-mono relative flex items-center gap-1.5 px-2.5 py-2 transition-colors duration-200",
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <span className="relative flex h-1.5 w-1.5 items-center justify-center">
+        {active && <motion.span layoutId="nav-dot" transition={springSoft} className="absolute h-1.5 w-1.5 rounded-full bg-signal" />}
+      </span>
+      <span className="text-[10px] text-muted-foreground/70">{String(index).padStart(2, "0")}</span>
+      <span aria-label={label}>{text}</span>
+    </Link>
   );
 }

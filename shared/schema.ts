@@ -100,6 +100,18 @@ export const spotifyTokens = pgTable("spotify_tokens", {
 
 export type SpotifyToken = typeof spotifyTokens.$inferSelect;
 
+// --- Imágenes de posts ---
+// Las imágenes pegadas en el editor llegan como data: URLs; el servidor las extrae aquí y el HTML
+// guarda solo `/api/media/:id` (servido con caché inmutable), así los listados no pesan megas.
+export const media = pgTable("media", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mimeType: text("mime_type").notNull(),
+  data: text("data").notNull(), // base64
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Media = typeof media.$inferSelect;
+
 // --- Tablas de Viajes (Global Travel Dashboard) ---
 export const visitedPlaces = pgTable("visited_places", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -168,6 +180,8 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Post = typeof posts.$inferSelect;
+// Lo que devuelven los listados: sin `content` (puede ser largo), con extracto ya calculado
+export type PostSummary = Omit<Post, "content"> & { excerpt: string; readMinutes: number };
 // 🚨 CORRECCIÓN CLAVE: InsertPost ahora usa el tipo de la BASE DE DATOS, no el de Zod.
 // Esto permite que 'authorId' sea obligatorio en el backend.
 export type InsertPost = typeof posts.$inferInsert; 

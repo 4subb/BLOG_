@@ -118,8 +118,8 @@ export function MagneticParticles({
         ctx.beginPath();
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         ctx.strokeStyle = isDark
-          ? `rgba(100, 160, 255, ${alpha * 0.5})`
-          : `rgba(30, 80, 200, ${alpha * 0.35})`;
+          ? `rgba(255, 86, 35, ${alpha * 0.5})`
+          : `rgba(255, 86, 35, ${alpha * 0.45})`;
         ctx.lineWidth = 1.5;
         ctx.stroke();
         return true;
@@ -180,8 +180,8 @@ export function MagneticParticles({
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
             ctx.strokeStyle = isDark
-              ? `hsla(${a.hue}, 70%, 75%, ${lineAlpha})`
-              : `hsla(${a.hue}, 80%, 38%, ${lineAlpha})`;
+              ? `hsla(33, 10%, 70%, ${lineAlpha})`
+              : `hsla(30, 8%, 55%, ${lineAlpha})`;
             ctx.lineWidth = nearCursor ? 1.1 : 0.4;
             ctx.stroke();
           }
@@ -198,8 +198,8 @@ export function MagneticParticles({
         if (glowRatio > 0.05) {
           const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 5);
           grd.addColorStop(0, isDark
-            ? `hsla(${p.hue}, 90%, 80%, ${opacity * 0.7})`
-            : `hsla(${p.hue}, 90%, 45%, ${opacity * 0.5})`);
+            ? `hsla(15, 100%, 65%, ${opacity * 0.5})`
+            : `hsla(15, 100%, 57%, ${opacity * 0.35})`);
           grd.addColorStop(1, 'transparent');
           ctx.beginPath();
           ctx.arc(p.x, p.y, size * 5, 0, Math.PI * 2);
@@ -210,8 +210,8 @@ export function MagneticParticles({
         ctx.beginPath();
         ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
         ctx.fillStyle = isDark
-          ? `hsla(${p.hue}, 80%, 78%, ${opacity})`
-          : `hsla(${p.hue}, 90%, 35%, ${opacity})`;
+          ? `hsla(54, 50%, 92%, ${opacity})`
+          : `hsla(216, 6%, 22%, ${opacity})`;
         ctx.fill();
       });
 

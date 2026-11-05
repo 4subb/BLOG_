@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
-  Shuffle, Repeat, Repeat1, Heart, ChevronDown, LogOut, ExternalLink, Music2
+  Shuffle, Repeat, Repeat1, Heart, ChevronDown, ChevronUp, X, LogOut, ExternalLink, Music2
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -28,6 +28,8 @@ interface SpotifySDKPlayer {
   removeListener: (event: string) => void;
   getCurrentState: () => Promise<any>;
   setVolume: (vol: number) => Promise<void>;
+  activateElement: () => Promise<void>;
+  togglePlay: () => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   previousTrack: () => Promise<void>;
@@ -86,6 +88,14 @@ export function SpotifyPlayer() {
 
   const [connected, setConnected] = useState(false);
   const [open, setOpen] = useState(false);
+  // Minimizado = barra horizontal compacta; se recuerda entre visitas
+  const [minimized, setMinimized] = useState(() => {
+    try { return localStorage.getItem('spotify-minimized') === '1'; } catch { return false; }
+  });
+  const toggleMinimized = (value: boolean) => {
+    setMinimized(value);
+    try { localStorage.setItem('spotify-minimized', value ? '1' : '0'); } catch {}
+  };
   const [state, setState] = useState<PlayerState | null>(null);
   const [volume, setVolume] = useState(50);
   const [muted, setMuted] = useState(false);
@@ -94,11 +104,15 @@ export function SpotifyPlayer() {
   const [seeking, setSeeking] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
+  // true cuando lo que suena es este navegador (el SDK emite estado); si suena en el móvil/PC
+  // del usuario, el reproductor actúa como mando a distancia vía API
+  const [sdkActive, setSdkActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const sdkPlayerRef = useRef<SpotifySDKPlayer | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const tokenRef = useRef<string>('');
+  const sdkInitRef = useRef(false);
 
   /* ── Fetch current state from API ── */
   const fetchState = useCallback(async () => {
@@ -113,14 +127,13 @@ export function SpotifyPlayer() {
     }
   }, []);
 
-  /* ── Load Spotify Web Playback SDK ── */
-  const loadSDK = useCallback(async () => {
-    const tokenData = await api('/token');
-    if (!tokenData?.access_token) return;
-    tokenRef.current = tokenData.access_token;
+  /* ── Load Spotify Web Playback SDK (una sola vez por página) ── */
+  const loadSDK = useCallback(() => {
+    if (sdkInitRef.current) return;
+    sdkInitRef.current = true;
 
     if (window.Spotify) {
-      initSDKPlayer(tokenData.access_token);
+      initSDKPlayer();
       return;
     }
 
@@ -133,12 +146,10 @@ export function SpotifyPlayer() {
       document.head.appendChild(script);
     }
 
-    window.onSpotifyWebPlaybackSDKReady = () => {
-      initSDKPlayer(tokenRef.current);
-    };
+    window.onSpotifyWebPlaybackSDKReady = initSDKPlayer;
   }, []);
 
-  const initSDKPlayer = (_initialToken: string) => {
+  const initSDKPlayer = () => {
     const player = new window.Spotify.Player({
       name: 'Mi Portfolio 🎵',
       getOAuthToken: async (cb) => {
@@ -149,15 +160,16 @@ export function SpotifyPlayer() {
       volume: 0.5,
     });
 
+    // Sin transferir la reproducción al cargar: eso pausaba la música del móvil/PC en cada visita.
+    // Solo se pasa a este navegador cuando el usuario pulsa play aquí.
     player.addListener('ready', ({ device_id }: { device_id: string }) => {
       setDeviceId(device_id);
       setSdkReady(true);
-      // Transfer playback silently (don't auto-play)
-      api('/player/transfer', 'PUT', { device_id, play: false });
     });
 
     player.addListener('not_ready', () => {
       setSdkReady(false);
+      setSdkActive(false);
       setDeviceId(null);
     });
 
@@ -169,18 +181,28 @@ export function SpotifyPlayer() {
     player.addListener('authentication_error', ({ message }: { message: string }) => {
       console.error('Spotify SDK auth error:', message);
       setSdkReady(false);
+      setError('Spotify pidió volver a iniciar sesión: desconecta y vuelve a conectar.');
     });
 
     player.addListener('account_error', ({ message }: { message: string }) => {
       console.error('Spotify SDK account error (Premium required):', message);
       setSdkReady(false);
+      setError('Reproducir en el navegador requiere Spotify Premium. Puedes seguir controlando tu móvil o PC.');
+    });
+
+    player.addListener('playback_error', ({ message }: { message: string }) => {
+      console.error('Spotify SDK playback error:', message);
+      setError('Spotify no pudo reproducir esta canción.');
     });
 
     player.addListener('player_state_changed', (sdkState: any) => {
-      if (!sdkState) return;
+      // null = la reproducción se fue a otro dispositivo
+      if (!sdkState) { setSdkActive(false); return; }
       const track = sdkState.track_window?.current_track;
       if (!track) return;
-      setState({
+      setSdkActive(true);
+      setError(null);
+      setState(prev => ({
         is_playing: !sdkState.paused,
         progress_ms: sdkState.position,
         shuffle_state: sdkState.shuffle,
@@ -193,8 +215,8 @@ export function SpotifyPlayer() {
           duration_ms: track.duration_ms,
           external_urls: { spotify: `https://open.spotify.com/track/${track.id}` },
         },
-        device: { volume_percent: volume },
-      });
+        device: prev?.device,
+      }));
       setLocalProgress(sdkState.position);
     });
 
@@ -221,13 +243,13 @@ export function SpotifyPlayer() {
     }
   }, [isAuthenticated, fetchState, loadSDK]);
 
-  /* ── Poll API (fallback for non-SDK devices) ── */
+  /* ── Poll API mientras suena en otro dispositivo (el SDK solo informa de lo que suena aquí) ── */
   useEffect(() => {
-    if (!connected || sdkReady) return; // SDK handles updates when ready
+    if (!connected || sdkActive) return;
     fetchState();
     pollRef.current = setInterval(fetchState, 4000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [connected, sdkReady, fetchState]);
+  }, [connected, sdkActive, fetchState]);
 
   /* ── Progress ticker ── */
   useEffect(() => {
@@ -254,39 +276,43 @@ export function SpotifyPlayer() {
     return cycle[(cycle.indexOf(state?.repeat_state || 'off') + 1) % 3];
   };
 
-  /* ── Play/Pause handler: uses SDK if available ── */
-  const handlePlayPause = async () => {
-    const playing = state?.is_playing;
+  const sdk = sdkActive ? sdkPlayerRef.current : null;
 
-    if (sdkPlayerRef.current && sdkReady && deviceId) {
-      if (playing) {
-        // Pause via SDK
-        await sdkPlayerRef.current.pause();
-        setState(s => s ? { ...s, is_playing: false } : s);
-      } else if (track) {
-        // Resume current track via SDK
-        await sdkPlayerRef.current.resume();
-        setState(s => s ? { ...s, is_playing: true } : s);
-      } else {
-        // Nothing playing — transfer to SDK device and start liked songs
-        await api('/player/transfer', 'PUT', { device_id: deviceId, play: false });
-        // Small delay so Spotify registers the device
-        await new Promise(r => setTimeout(r, 500));
-        await api('/player/play', 'POST', { device_id: deviceId });
-        setState(s => s ? { ...s, is_playing: true } : s);
-        setTimeout(fetchState, 1500);
-      }
-    } else {
-      // Fallback: use API directly
-      setState(s => s ? { ...s, is_playing: !playing } : s);
-      await api(playing ? '/player/pause' : '/player/play', 'POST', deviceId ? { device_id: deviceId } : undefined);
-      setTimeout(fetchState, 800);
+  /* ── Play/Pause ── */
+  const handlePlayPause = async () => {
+    // Debe ejecutarse dentro del gesto del usuario (antes de cualquier await): sin esto
+    // Chrome/Safari bloquean el audio del reproductor web y "no suena" aunque Spotify diga que sí
+    sdkPlayerRef.current?.activateElement().catch(() => {});
+    setError(null);
+
+    if (sdk) {
+      await sdk.togglePlay();
+      return;
     }
+
+    const playing = state?.is_playing;
+    setState(s => s ? { ...s, is_playing: !playing } : s);
+    if (playing) {
+      // Suena en otro dispositivo: pausarlo allí
+      await api('/player/pause', 'POST');
+    } else {
+      // Traer la reproducción a este navegador (si el SDK está listo) o reanudar donde estaba
+      const result = await api('/player/play', 'POST', sdkReady && deviceId ? { device_id: deviceId } : {});
+      if (!result?.ok) {
+        setState(s => s ? { ...s, is_playing: false } : s);
+        setError(
+          result?.reason === 'PREMIUM_REQUIRED' ? 'Spotify Premium es necesario para controlar la reproducción.'
+          : !sdkReady ? 'Abre Spotify en tu móvil o PC para poder reproducir.'
+          : 'No se pudo iniciar la reproducción. Inténtalo de nuevo.'
+        );
+      }
+    }
+    setTimeout(fetchState, 1000);
   };
 
   const handleNext = async () => {
-    if (sdkPlayerRef.current && sdkReady) {
-      await sdkPlayerRef.current.nextTrack();
+    if (sdk) {
+      await sdk.nextTrack();
     } else {
       await api('/player/next', 'POST');
       setTimeout(fetchState, 500);
@@ -294,8 +320,8 @@ export function SpotifyPlayer() {
   };
 
   const handlePrev = async () => {
-    if (sdkPlayerRef.current && sdkReady) {
-      await sdkPlayerRef.current.previousTrack();
+    if (sdk) {
+      await sdk.previousTrack();
     } else {
       await api('/player/prev', 'POST');
       setTimeout(fetchState, 500);
@@ -304,8 +330,8 @@ export function SpotifyPlayer() {
 
   const handleSeek = async (ms: number) => {
     setLocalProgress(ms);
-    if (sdkPlayerRef.current && sdkReady) {
-      await sdkPlayerRef.current.seek(ms);
+    if (sdk) {
+      await sdk.seek(ms);
     } else {
       await api('/player/seek', 'PUT', { position_ms: ms });
     }
@@ -314,8 +340,8 @@ export function SpotifyPlayer() {
   const handleVolume = async (val: number) => {
     setVolume(val);
     setMuted(val === 0);
-    if (sdkPlayerRef.current && sdkReady) {
-      await sdkPlayerRef.current.setVolume(val / 100);
+    if (sdk) {
+      await sdk.setVolume(val / 100);
     } else {
       await api('/player/volume', 'PUT', { volume_percent: val });
     }
@@ -385,7 +411,83 @@ export function SpotifyPlayer() {
       {/* ── Popup via Portal (escapes header's backdrop-filter context) ── */}
       {createPortal(
       <AnimatePresence>
-        {open && connected && (
+        {open && connected && minimized && (
+          <motion.div
+            key="spotify-bar"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="fixed bottom-4 left-4 z-[300] h-16 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl
+                       border border-border bg-neutral-900 shadow-2xl"
+          >
+            {/* Fondo: portada difuminada y oscurecida para que los controles se lean */}
+            {albumArt && (
+              <motion.img
+                key={albumArt}
+                src={albumArt}
+                alt=""
+                className="absolute inset-0 h-full w-full scale-125 object-cover blur-md"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              />
+            )}
+            <div className="absolute inset-0 bg-black/55" />
+
+            <div className="relative flex h-full items-center gap-3 pl-2 pr-2">
+              {albumArt ? (
+                <img src={albumArt} alt="" className="h-11 w-11 shrink-0 rounded-lg object-cover shadow-md" />
+              ) : (
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/10">
+                  <Music2 className="h-5 w-5 text-white/50" />
+                </div>
+              )}
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold leading-tight text-white">
+                  {track?.name ?? (sdkReady ? 'Presiona play' : 'Spotify')}
+                </p>
+                <p className="truncate text-xs text-white/60">
+                  {error ?? track?.artists.map(a => a.name).join(', ') ?? ''}
+                </p>
+              </div>
+
+              <div className="flex shrink-0 items-center">
+                <button onClick={handlePrev} aria-label="Anterior" className="p-1.5 text-white/80 transition-colors hover:text-white">
+                  <SkipBack className="h-4 w-4 fill-current" />
+                </button>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handlePlayPause}
+                  aria-label={state?.is_playing ? 'Pausa' : 'Reproducir'}
+                  className="mx-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-white"
+                >
+                  {state?.is_playing
+                    ? <Pause className="h-4 w-4 fill-black text-black" />
+                    : <Play className="ml-0.5 h-4 w-4 fill-black text-black" />}
+                </motion.button>
+                <button onClick={handleNext} aria-label="Siguiente" className="p-1.5 text-white/80 transition-colors hover:text-white">
+                  <SkipForward className="h-4 w-4 fill-current" />
+                </button>
+                <span className="mx-1 h-6 w-px bg-white/20" />
+                <button onClick={() => toggleMinimized(false)} aria-label="Expandir" title="Expandir" className="p-1.5 text-white/70 transition-colors hover:text-white">
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+                <button onClick={() => setOpen(false)} aria-label="Cerrar" title="Cerrar" className="p-1.5 text-white/70 transition-colors hover:text-white">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Progreso */}
+            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-white/15">
+              <div className="h-full bg-[#1DB954] transition-[width] duration-1000 ease-linear" style={{ width: `${progressPct}%` }} />
+            </div>
+          </motion.div>
+        )}
+
+        {open && connected && !minimized && (
           <motion.div
             key="spotify-popup"
             initial={{ opacity: 0, scale: 0.8, y: 20, originX: 1, originY: 1 }}
@@ -414,21 +516,35 @@ export function SpotifyPlayer() {
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
 
-              {/* Close → animates toward header */}
-              <motion.button
-                onClick={() => setOpen(false)}
-                whileTap={{ scale: 0.85 }}
-                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm
-                           flex items-center justify-center text-white/80 hover:text-white transition-colors"
-              >
-                <ChevronDown className="w-4 h-4" />
-              </motion.button>
+              {/* Minimizar a barra / cerrar */}
+              <div className="absolute top-2 right-2 flex gap-1.5">
+                <motion.button
+                  onClick={() => toggleMinimized(true)}
+                  whileTap={{ scale: 0.85 }}
+                  aria-label="Minimizar"
+                  title="Minimizar"
+                  className="w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm
+                             flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </motion.button>
+                <motion.button
+                  onClick={() => setOpen(false)}
+                  whileTap={{ scale: 0.85 }}
+                  aria-label="Cerrar"
+                  title="Cerrar"
+                  className="w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm
+                             flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </motion.button>
+              </div>
 
               {/* Spotify badge */}
               <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
                 <SpotifyIcon className="w-3 h-3 text-[#1DB954]" />
                 <span className="text-[10px] text-white/80 font-semibold tracking-wide">
-                  {sdkReady ? 'En vivo' : 'Spotify'}
+                  {sdkActive ? 'En este navegador' : 'Spotify'}
                 </span>
               </div>
 
@@ -446,11 +562,15 @@ export function SpotifyPlayer() {
                   </>
                 ) : (
                   <p className="text-xs text-white/50 italic">
-                    {sdkReady ? 'Presiona play para empezar' : 'Nada reproduciendo'}
+                    {sdkReady ? 'Presiona play para empezar' : 'Conectando reproductor…'}
                   </p>
                 )}
               </div>
             </div>
+
+            {error && (
+              <p role="alert" className="mx-4 mt-3 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>
+            )}
 
             {/* ── Progress ── */}
             <div className="px-4 pt-3 pb-1">
@@ -559,7 +679,8 @@ export function SpotifyPlayer() {
                   if (!window.confirm('¿Desconectar tu cuenta de Spotify? Tendrás que volver a vincularla.')) return;
                   sdkPlayerRef.current?.disconnect();
                   await api('/logout', 'POST');
-                  setConnected(false); setState(null); setOpen(false); setSdkReady(false); setDeviceId(null);
+                  sdkInitRef.current = false;
+                  setConnected(false); setState(null); setOpen(false); setSdkReady(false); setSdkActive(false); setDeviceId(null); setError(null);
                 }}
                 className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
               >

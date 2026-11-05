@@ -1,53 +1,47 @@
-# Design Guidelines — Minimal Premium
+# Design Guidelines — "Mission Control"
 
-Inspiración: Linear, Vercel. El contenido manda; la interfaz se retira y solo "vive" en las transiciones y micro-interacciones.
+Inspiración: vastspace.com. Interfaz de bitácora técnica: cálida, tipográfica, precisa. Todas las páginas comparten
+**una sola estructura**; cada sección se distingue por su **animación de firma**.
 
-## Principios
-1. **Contenido primero** — sin decoración que compita con el texto o las imágenes.
-2. **Espacio generoso** — secciones con `py-20 sm:py-28`, cabeceras con `pt-16 sm:pt-24`.
-3. **Bordes de 1px** — `border-border/60–70`; las sombras son casi planas y solo crecen al hover.
-4. **Monocromo** — negro/blanco + escala de grises. El azul (`--ring`) es solo para el foco.
-5. **Movimiento con intención** — rápido al arrancar, frenado largo (`out-expo`); muelles cortos en hover/tap.
-
-## Tokens (client/src/index.css)
-| Token | Claro | Oscuro |
-|---|---|---|
-| `--background` | `0 0% 99%` | `0 0% 4%` |
-| `--card` | `0 0% 100%` | `0 0% 6%` |
-| `--border` | `240 6% 90%` | `0 0% 14%` |
-| `--primary` | `240 6% 10%` | `0 0% 98%` |
-| `--muted-foreground` | `240 4% 46%` | `0 0% 62%` |
-| `--ring` | `217 91% 60%` | `217 91% 60%` |
-
-Usa siempre las clases de tokens (`bg-card`, `text-muted-foreground`…). Nunca `gray-*`, `bg-white` ni `text-black` (rompen el modo oscuro). Excepción: el editor Quill, que necesita fondo blanco.
+## Paleta (client/src/index.css)
+| Token | Claro | Oscuro | Uso |
+|---|---|---|---|
+| `--background` | warm white `#fdfcf4` | `#131416` | fondo |
+| `--foreground` | meteorite `#2a2c2f` | warm white | texto |
+| `--muted` | warm gray `#ece8e3` | — | paneles, hovers |
+| `--rock` | moon rock `#b3aba3` | — | reglas de 1px (`border-rock/40–70`, `bg-rock`) |
+| `--signal` | solar orange `#ff5623` | — | **único acento**: punto activo, foco, estados vivos |
+| `--ghost` | — | — | palabras gigantes de fondo (`text-ghost`) |
+Nunca uses colores fijos (`gray-*`, `blue-*`, `white`); usa tokens. El naranja se dosifica: un punto, una línea, un hover.
 
 ## Tipografía
-- **Geist** para todo el texto; **Geist Mono** para eyebrows, categorías y metadatos (`font-mono text-xs uppercase tracking-[0.12em]`).
-- Titulares: `font-semibold`, tracking negativo (`-0.03em` en h2, `-0.04em` en h1), `leading` ajustado.
-- Párrafos: `text-muted-foreground leading-relaxed`, ancho máximo ~`max-w-2xl`.
+- `font-display` — Archivo ancho (wdth 112), peso 500, interlineado 0.86, tracking negativo. Titulares gigantes.
+- `label-mono` — Geist Mono 11px en mayúsculas. Telemetría, índices `(01)`, metadatos, fechas `12.10.2026`.
+- Cuerpo: Archivo normal, `text-muted-foreground` para secundario.
 
-## Layout
-- `AppLayout` renderiza Header + `<main>` + Footer una sola vez. Las páginas **no** importan Header/Footer.
-- `/login`, `/register`, `/auth` se muestran sin chrome, usando `AuthShell`.
-- `.page-container` = `max-w-6xl` + gutters. Lectura (PostDetail): `max-w-3xl`.
-- Cabeceras de sección: `PageHeader` (icono + eyebrow + título + descripción sobre `bg-grid`).
-- Estados vacíos: `EmptyState`. Cargas: skeletons (`PostCardSkeleton`), nunca un "Cargando…" en texto suelto.
+## Estructura común de página
+1. `MissionHero` (`components/mission/MissionHero.tsx`): telemetría `[03] / Ingeniería` + reloj SLP · titular `SplitReveal`
+   · descripción + acciones · `SpecSheet` con `Counter` · `GhostWord` con parallax · capa `signature`.
+2. Secciones con `SectionHead index="01" title=…` (regla que se dibuja + etiqueta mono).
+3. Contenido: `PostCard` (imagen recta que se destapa), `IndexList` (filas grandes con vista previa que sigue al cursor).
+4. Vacío: `EmptyMission`. Páginas de herramienta (perfil, panel, editor): `PageIntro`.
 
-## Navegación
-- Header sticky, transparente arriba; al hacer scroll gana `bg-background/75 backdrop-blur-xl` y un borde inferior.
-- La ruta activa se marca con una píldora `layoutId="nav-pill"` que sigue al cursor.
-- El menú de usuario va en un `DropdownMenu` (Radix).
-
-## Movimiento (client/src/lib/motion.ts)
-| Preset | Uso |
+## Firmas por sección (`components/mission/signatures.tsx`)
+| Página | Firma |
 |---|---|
-| `pageVariants` | Cambio de ruta (`App.tsx`, `AnimatePresence mode="wait"`). Solo opacidad + Y. |
-| `Stagger` / `StaggerItem` | Revelado en cascada de rejillas y listas (`inView` para contenido bajo el pliegue). |
-| `hoverLift` | Tarjetas clicables: elevación -4px con muelle + `scale(0.985)` al pulsar. |
-| `springSnappy` / `springSoft` | Micro-interacciones / elementos que se desplazan. |
+| Inicio | retrato con brackets y tilt 3D · índice con vista previa flotante · biografía que se ilumina con el scroll |
+| Ingeniería | `BlueprintSignature`: plano técnico que se dibuja + mira con coordenadas X/Y |
+| Deportes | `PulseSignature`: línea de telemetría con tramo naranja en bucle |
+| Viajes | `FlightSignature`: ruta de vuelo con avión recorriéndola |
+| Lectura | `ScrollReadText` (manifiesto) + cursor parpadeante + renglones |
+| Galería | `ViewfinderSignature` (REC + timecode) + imágenes que se destapan con barrido |
+| Login/Registro | panel de misión con pulso |
 
-Reglas:
-- No animes `filter` en wrappers de layout: crea un containing block y rompe `sticky`/`fixed` (AcademicProfile depende de ello).
-- Los botones no escalan al hover; solo `active:scale-[0.97]`.
-- Imágenes de tarjeta: `group-hover:scale-[1.04]` con `duration-700 ease-out-expo`.
-- `MotionConfig reducedMotion="user"` respeta la preferencia del sistema.
+## Movimiento
+- Curva `easeOutExpo` (`lib/motion.ts`); revelados con máscara (`clip-path`/`overflow hidden`), nunca rebotes exagerados.
+- Barra naranja de 2px barre la parte superior en cada cambio de ruta (`App.tsx`).
+- No animes `filter` en wrappers de layout (rompe `sticky`/`fixed`). `MotionConfig reducedMotion="user"` y
+  `prefers-reduced-motion` desactivan marquee, parpadeos, scramble y contadores.
+
+## Formas
+Esquinas rectas (`rounded-sm` como máximo) en tarjetas e imágenes; botones de acción en píldora (`rounded-full`).

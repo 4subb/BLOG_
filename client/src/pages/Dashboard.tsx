@@ -1,5 +1,6 @@
+import PageIntro from "@/components/mission/PageIntro";
 import React, { useState, useEffect } from 'react';
-import { postCategoryEnum, type Post, type User } from '@shared/schema';
+import { postCategoryEnum, type PostSummary, type User } from '@shared/schema';
 import { Link, useLocation } from 'wouter'; 
 
 import ReactQuill, { Quill } from 'react-quill';
@@ -42,7 +43,7 @@ function DashboardPage() {
   const [userMessage, setUserMessage] = useState<string | null>(null);
   const [users, setUsers] = useState<SafeUser[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostSummary[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
 
   // 1. EL PORTERO: Si no es admin, lo expulsamos al inicio
@@ -121,7 +122,7 @@ function DashboardPage() {
     } catch (error) { setIsPostError(true); setPostMessage('Error de red.'); }
   };
 
-  const handleTogglePublish = async (post: Post) => {
+  const handleTogglePublish = async (post: PostSummary) => {
     const newStatus = !post.isPublished;
     try {
       const res = await fetch(`/api/posts/${post.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isPublished: newStatus }) });
@@ -161,10 +162,9 @@ function DashboardPage() {
 
   return (
     <div className="flex-1">
-      <main className="page-container max-w-5xl py-14 sm:py-20">
+      <main className="page-container pb-24 pt-8 sm:pt-10">
+        <PageIntro index="A1" label="Admin" title="Panel de control" />
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">Admin</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">Panel de Administrador</h1>
           
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full mt-6">
             <TabsList className="grid w-full grid-cols-3">

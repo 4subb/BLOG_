@@ -17,54 +17,54 @@
   --elevate-1: rgba(0,0,0, .025);
   --elevate-2: rgba(0,0,0, .05);
 
-  --background: 0 0% 99%; /* Gray blur background when light */
-  --foreground: 240 10% 4%;
+  --background: 54 78% 97%; /* Gray blur background when light */
+  --foreground: 216 6% 17%;
 
-  --border: 240 6% 90%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 4%;
-  --card-border: 240 6% 90%;
+  --border: 33 14% 84%;
+  --card: 50 60% 99%;
+  --card-foreground: 216 6% 17%;
+  --card-border: 33 14% 84%;
 
-  --sidebar: 0 0% 98%;
-  --sidebar-foreground: 240 10% 4%;
-  --sidebar-border: 240 6% 90%;
-  --sidebar-primary: 240 6% 10%;
+  --sidebar: 40 30% 95%;
+  --sidebar-foreground: 216 6% 17%;
+  --sidebar-border: 33 14% 84%;
+  --sidebar-primary: 216 6% 17%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 5% 95%;
-  --sidebar-accent-foreground: 240 6% 10%;
-  --sidebar-ring: 217 91% 60%;
+  --sidebar-accent: 33 19% 91%;
+  --sidebar-accent-foreground: 216 6% 17%;
+  --sidebar-ring: 15 100% 57%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 4%;
-  --popover-border: 240 6% 90%;
+  --popover: 50 60% 99%;
+  --popover-foreground: 216 6% 17%;
+  --popover-border: 33 14% 84%;
 
-  --primary: 240 6% 10%;
-  --primary-foreground: 0 0% 98%;
+  --primary: 216 6% 17%;
+  --primary-foreground: 54 78% 97%;
 
-  --secondary: 240 5% 96%;
-  --secondary-foreground: 240 6% 10%;
+  --secondary: 33 19% 91%;
+  --secondary-foreground: 216 6% 17%;
 
-  --muted: 240 5% 96%;
-  --muted-foreground: 240 4% 46%;
+  --muted: 33 19% 91%;
+  --muted-foreground: 30 8% 40%;
 
-  --accent: 240 5% 95%;
-  --accent-foreground: 240 6% 10%;
+  --accent: 33 19% 91%;
+  --accent-foreground: 216 6% 17%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 240 6% 90%;
-  --ring: 217 91% 60%;
-  --chart-1: 217 91% 60%;
-  --chart-2: 240 5% 40%;
-  --chart-3: 200 80% 40%;
-  --chart-4: 260 60% 60%;
-  --chart-5: 280 50% 50%;
+  --input: 33 12% 80%;
+  --ring: 15 100% 57%;
+  --chart-1: 15 100% 57%;
+  --chart-2: 216 6% 17%;
+  --chart-3: 30 8% 55%;
+  --chart-4: 140 56% 40%;
+  --chart-5: 33 19% 75%;
 
-  --font-sans: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Archivo', system-ui, -apple-system, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'Geist Mono', 'JetBrains Mono', Menlo, monospace;
-  --radius: .625rem; /* 8px */
+  --radius: .25rem; /* 8px */
   --shadow-2xs: 0px 1px 1px 0px hsl(240 10% 4% / 0.02);
   --shadow-xs: 0px 1px 2px 0px hsl(240 10% 4% / 0.04);
   --shadow-sm: 0px 1px 2px 0px hsl(240 10% 4% / 0.04), 0px 1px 3px 0px hsl(240 10% 4% / 0.03);
@@ -105,6 +105,11 @@
   /* Fallback for older browsers */
   --destructive-border: hsl(var(--destructive));
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Tokens propios del sistema Mission Control */
+  --rock: 30 8% 67%;      /* líneas de regla (moon rock) */
+  --signal: 15 100% 57%;  /* acento único (solar orange) */
+  --ghost: 33 19% 91%;    /* tipografía gigante de fondo */
 }
 
 .dark {
@@ -117,46 +122,46 @@
   --elevate-1: rgba(255,255,255, .035);
   --elevate-2: rgba(255,255,255, .07);
 
-  --background: 0 0% 4%; /* Dark black ground when dark */
-  --foreground: 0 0% 95%;
+  --background: 216 7% 8%; /* Dark black ground when dark */
+  --foreground: 54 50% 94%;
 
-  --border: 0 0% 14%;
-  --card: 0 0% 6%;
-  --card-foreground: 0 0% 95%;
-  --card-border: 0 0% 13%;
+  --border: 30 4% 20%;
+  --card: 216 6% 10%;
+  --card-foreground: 54 50% 94%;
+  --card-border: 30 4% 20%;
 
-  --sidebar: 0 0% 6%;
-  --sidebar-foreground: 0 0% 95%;
-  --sidebar-border: 0 0% 13%;
-  --sidebar-primary: 0 0% 98%;
-  --sidebar-primary-foreground: 0 0% 4%;
-  --sidebar-accent: 0 0% 12%;
-  --sidebar-accent-foreground: 0 0% 95%;
-  --sidebar-ring: 217 91% 60%;
+  --sidebar: 216 6% 10%;
+  --sidebar-foreground: 54 50% 94%;
+  --sidebar-border: 30 4% 20%;
+  --sidebar-primary: 54 50% 94%;
+  --sidebar-primary-foreground: 216 7% 8%;
+  --sidebar-accent: 216 5% 14%;
+  --sidebar-accent-foreground: 54 50% 94%;
+  --sidebar-ring: 15 100% 60%;
 
-  --popover: 0 0% 6%;
-  --popover-foreground: 0 0% 95%;
-  --popover-border: 0 0% 14%;
+  --popover: 216 6% 10%;
+  --popover-foreground: 54 50% 94%;
+  --popover-border: 30 4% 20%;
 
-  --primary: 0 0% 98%;
-  --primary-foreground: 0 0% 4%;
+  --primary: 54 50% 94%;
+  --primary-foreground: 216 7% 8%;
 
-  --secondary: 0 0% 12%;
-  --secondary-foreground: 0 0% 95%;
+  --secondary: 216 5% 14%;
+  --secondary-foreground: 54 50% 94%;
 
-  --muted: 0 0% 11%;
-  --muted-foreground: 0 0% 62%;
+  --muted: 216 5% 13%;
+  --muted-foreground: 33 10% 63%;
 
-  --accent: 0 0% 12%;
-  --accent-foreground: 0 0% 95%;
+  --accent: 216 5% 14%;
+  --accent-foreground: 54 50% 94%;
 
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
 
-  --input: 0 0% 16%;
-  --ring: 217 91% 60%;
-  --chart-1: 217 91% 60%;
-  --chart-2: 0 0% 55%;
+  --input: 30 4% 24%;
+  --ring: 15 100% 60%;
+  --chart-1: 15 100% 60%;
+  --chart-2: 54 50% 94%;
   --chart-3: 200 80% 50%;
   --chart-4: 260 60% 70%;
   --chart-5: 280 50% 60%;
@@ -199,6 +204,10 @@
   /* Fallback for older browsers */
   --destructive-border: hsl(var(--destructive));
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  --rock: 30 5% 34%;
+  --signal: 15 100% 60%;
+  --ghost: 216 5% 13%;
 }
 
 @layer base {
@@ -209,11 +218,13 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+    /* framer-motion useScroll({ target }) mide offsets contra el contenedor de scroll */
+    position: relative;
   }
 
   body {
     @apply antialiased bg-background text-foreground font-sans;
-    font-feature-settings: "ss01", "cv11";
+    font-variation-settings: "wdth" 100;
   }
 
   h1, h2, h3, h4 {
@@ -226,7 +237,8 @@
   }
 
   ::selection {
-    @apply bg-foreground text-background;
+    background: hsl(var(--signal));
+    color: hsl(var(--background));
   }
 
   :focus-visible {
@@ -236,16 +248,30 @@
 
 @layer utilities {
 
-  /* Contenedor de página estándar (ancho + gutters) */
+  /* Contenedor de página estándar: ancho amplio, gutters generosos (estilo Vast) */
   .page-container {
-    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+    @apply mx-auto w-full max-w-[1440px] px-5 sm:px-8 lg:px-12;
+  }
+
+  /* Display: grotesca ancha y compacta para titulares gigantes */
+  .font-display {
+    font-family: 'Archivo', system-ui, sans-serif;
+    font-variation-settings: "wdth" 112;
+    font-weight: 500;
+    letter-spacing: -0.035em;
+    line-height: 0.86;
+  }
+
+  /* Etiqueta técnica: mono, pequeña, mayúsculas */
+  .label-mono {
+    @apply font-mono text-[11px] uppercase leading-none tracking-[0.08em];
   }
 
   /* Rejilla sutil para fondos de cabecera */
   .bg-grid {
     background-image:
-      linear-gradient(to right, hsl(var(--foreground) / 0.04) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--foreground) / 0.04) 1px, transparent 1px);
+      linear-gradient(to right, hsl(var(--rock) / 0.22) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--rock) / 0.22) 1px, transparent 1px);
     background-size: 56px 56px;
   }
 
@@ -449,6 +475,10 @@ html {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+  .animate-marquee,
+  .animate-blink {
+    animation: none !important;
   }
 }
 

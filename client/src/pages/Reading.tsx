@@ -1,75 +1,64 @@
-import { useState, useEffect } from "react";
-import { type Post } from "@shared/schema";
-import PostCard, { PostCardSkeleton } from "@/components/PostCard";
-import RecentPostsSidebar from "@/components/RecentPostsSidebar";
-import PageHeader from "@/components/layout/PageHeader";
-import EmptyState from "@/components/layout/EmptyState";
-import { Stagger, StaggerItem } from "@/components/motion/Stagger";
-import { BookOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import EmptyMission from "@/components/mission/EmptyMission";
+import MissionHero from "@/components/mission/MissionHero";
+import IndexList from "@/components/mission/IndexList";
+import { SectionHead } from "@/components/mission/primitives";
+import { ScrollReadText, TypeCursorSignature } from "@/components/mission/signatures";
+import { pad, usePosts } from "@/lib/posts";
 
 export default function Reading() {
   const { t } = useTranslation();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch('/api/posts/categoria/lectura', { credentials: 'include' });
-        if (!response.ok) throw new Error('Error');
-        const data: Post[] = await response.json();
-        setPosts(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchPosts();
-  }, []);
-
-  const viewPosts = posts.map(post => ({
-    ...post,
-    date: new Date(post.createdAt).toLocaleDateString(),
-    excerpt: post.content.replace(/<[^>]*>?/gm, '').substring(0, 200) + "...",
-    imageUrl: post.imageUrl || undefined,
-    country: post.country || undefined,
-    tags: post.tags || []
-  }));
-
-  const recentPosts = viewPosts.slice(0, 3);
+  const { posts, isLoading } = usePosts("lectura");
+  const minutes = posts.reduce((n, p) => n + p.readMinutes, 0);
 
   return (
     <>
-      <PageHeader icon={BookOpen} eyebrow={t('nav.reading')} title={t('pages.readingTitle')} description={t('pages.readingSubtitle')} />
+      <MissionHero
+        index="06"
+        label={t("nav.reading")}
+        title={t("pages.readingTitle")}
+        description={
+          <>
+            {t("pages.readingSubtitle")}
+            <span className="ml-1 inline-block h-[1.1em] w-[0.55em] translate-y-[0.2em] animate-blink bg-signal" />
+          </>
+        }
+        signature={<TypeCursorSignature />}
+        specs={[
+          { label: t("ui.entries"), value: posts.length, pad: 3 },
+          { label: t("ui.minRead"), value: minutes, pad: 3 },
+        ]}
+        ghost="Marginalia"
+      />
 
-      <section className="page-container py-14 sm:py-20">
-        <div className="flex flex-col gap-12 lg:flex-row">
-          <div className="min-w-0 flex-1">
-            {isLoading ? (
-              <div className="space-y-5">
-                {[0, 1, 2].map((i) => <PostCardSkeleton key={i} layout="list" />)}
-              </div>
-            ) : viewPosts.length === 0 ? (
-              <EmptyState icon={BookOpen} text="No hay posts todavía." />
-            ) : (
-              <Stagger className="space-y-5">
-                {viewPosts.map((post) => (
-                  <StaggerItem key={post.id}>
-                    <PostCard {...post} layout="list" />
-                  </StaggerItem>
-                ))}
-              </Stagger>
-            )}
+      {/* Manifiesto: se ilumina palabra a palabra con el scroll */}
+      <section className="page-container py-20 sm:py-32">
+        <SectionHead index="01" title={t("ui.dispatch")} className="mb-12" />
+        <ScrollReadText text={t("ui.readingManifesto")} className="font-display max-w-[24ch] text-[clamp(2rem,4.6vw,4.4rem)] leading-[1.02]" />
+      </section>
+
+      {/* Índice editorial */}
+      <section className="page-container pb-24 sm:pb-32">
+        <SectionHead index="02" title={t("ui.index")} aside={`${pad(posts.length, 3)} ${t("ui.entries")}`} className="mb-6" />
+        {isLoading ? (
+          <div className="space-y-px">
+            {[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse border-t border-rock/50 bg-muted/40" />)}
           </div>
-          <aside className="w-full lg:w-72 lg:shrink-0">
-            <div className="sticky top-24">
-              <RecentPostsSidebar posts={recentPosts} />
-            </div>
-          </aside>
-        </div>
+        ) : posts.length === 0 ? (
+          <EmptyMission />
+        ) : (
+          <IndexList
+            size="md"
+            rows={posts.map((p, i) => ({
+              key: p.id,
+              href: `/post/${p.id}`,
+              index: pad(i + 1),
+              title: p.title,
+              meta: `${p.dotDate} · ${p.readMinutes} min`,
+              image: p.imageUrl,
+            }))}
+          />
+        )}
       </section>
     </>
   );

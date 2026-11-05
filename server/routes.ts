@@ -5,6 +5,8 @@ import bcrypt from 'bcrypt';
 import { z } from 'zod';            
 import spotifyRouter from './spotify';
 import { catchAsyncErrors } from './asyncErrors';
+import { extractInlineImages, extractImageUrl, toPostSummary } from './postContent';
+import { lookupIp } from './geo';
 import { 
   postCategoryEnum, 
   insertPostSchema, 
@@ -46,8 +48,14 @@ const updateProfileSchema = z.object({
   avatarUrl: z.union([
     z.string().trim().url().max(2048).refine((u) => u.startsWith("https://"), "Solo URLs https"),
     z.string().regex(/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/).max(1_400_000),
+    z.string().regex(/^\/api\/media\/[0-9a-f-]{36}$/), // avatar ya guardado (se reenvía sin cambios)
     z.literal(""),
   ]).optional(),
+}).strict();
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(128),
 }).strict();
 
 const updateRoleSchema = z.object({ role: z.enum(['admin', 'user']) });
@@ -97,6 +105,16 @@ function startSession(req: Request, user: { id: string; email: string; role: 'ad
   });
 }
 
+// Guarda las imágenes embebidas (data:) de un post en la tabla media y deja solo su URL
+const saveImage = (mimeType: string, base64: string) => storage.createMedia(mimeType, base64);
+async function externalizeImages<T extends { content?: string; imageUrl?: string | null }>(data: T): Promise<T> {
+  return {
+    ...data,
+    ...(data.content !== undefined ? { content: await extractInlineImages(data.content, saveImage) } : {}),
+    ...(data.imageUrl !== undefined ? { imageUrl: await extractImageUrl(data.imageUrl, saveImage) } : {}),
+  };
+}
+
 const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (req.session.role !== 'admin') return res.status(403).json({ message: "Acceso denegado" });
   next();
@@ -109,7 +127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/spotify', spotifyRouter);
 
   // --- Admin Blog ---
-  app.get('/api/posts/admin', isAdmin, async (req, res) => { res.json(await storage.getPostsAdmin()); });
+  app.get('/api/posts/admin', isAdmin, async (req, res) => { res.json((await storage.getPostsAdmin()).map((p) => toPostSummary(p))); });
   app.get('/api/posts/:id/admin', isAdmin, async (req, res) => { res.json(await storage.getPostByIdAdmin(req.params.id) || { message: "No encontrado" }); });
   
   app.post('/api/posts', isAdmin, async (req, res) => {
@@ -117,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!val.success) return res.status(400).json(val.error);
     
     const post = await storage.createPost({ 
-      ...val.data, 
+      ...(await externalizeImages(val.data)), 
       authorId: req.session.userId! 
     });
     res.status(201).json({ message: "Creado", post });
@@ -126,7 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/posts/:id', isAdmin, async (req, res) => {
     const val = insertPostSchema.partial().safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
-    await storage.updatePost(req.params.id, val.data);
+    await storage.updatePost(req.params.id, await externalizeImages(val.data));
     res.json({ message: "Actualizado" });
   });
   app.delete('/api/posts/:id', isAdmin, async (req, res) => { await storage.deletePost(req.params.id); res.json({ message: "Borrado" }); });
@@ -154,14 +172,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { avatarUrl, ...rest } = val.data;
       const updatedUser = await storage.updateUser(req.session.userId, {
         ...rest,
-        ...(avatarUrl !== undefined ? { avatarUrl: avatarUrl || null } : {}),
+        // El avatar subido (data:) va a la tabla media: así /api/auth/me no lo arrastra en cada carga
+        ...(avatarUrl !== undefined ? { avatarUrl: (await extractImageUrl(avatarUrl, saveImage)) || null } : {}),
       });
       res.json(toPublicUser(updatedUser));
     } catch { res.status(500).json({ message: "Error" }); }
   });
   app.get('/api/users/me/bookmarks', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ message: "No autorizado" });
-    res.json(await storage.getUserBookmarks(req.session.userId));
+    res.json((await storage.getUserBookmarks(req.session.userId)).map((p) => toPostSummary(p)));
+  });
+  app.post('/api/users/password', authLimiter, async (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ message: "No autorizado" });
+    const val = changePasswordSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json({ message: "La nueva contraseña debe tener al menos 8 caracteres" });
+    const user = await storage.getUserById(req.session.userId);
+    if (!user || !(await bcrypt.compare(val.data.currentPassword, user.password_hash))) {
+      return res.status(400).json({ message: "La contraseña actual no es correcta" });
+    }
+    if (val.data.currentPassword === val.data.newPassword) {
+      return res.status(400).json({ message: "La nueva contraseña debe ser distinta de la actual" });
+    }
+    await storage.updateUser(user.id, { password_hash: await bcrypt.hash(val.data.newPassword, 10) });
+    // Nuevo ID de sesión: cualquier sesión robada con el ID anterior deja de servir
+    await startSession(req, user);
+    res.json({ message: "Contraseña actualizada" });
   });
 
   // --- Admin Deportes ---
@@ -264,13 +299,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // --- Públicas Blog ---
-  app.get('/api/posts', async (req, res) => { res.json(await storage.getPosts()); });
-  app.get('/api/posts/categoria/:category', async (req, res) => { res.json(await storage.getPostsByCategory(req.params.category)); });
+  // Los listados no incluyen `content`: el texto completo solo se pide al abrir el post
+  app.get('/api/posts', async (req, res) => { res.json((await storage.getPosts()).map((p) => toPostSummary(p))); });
+  app.get('/api/posts/categoria/:category', async (req, res) => { res.json((await storage.getPostsByCategory(req.params.category)).map((p) => toPostSummary(p))); });
+  // Ubicación aproximada del visitante (por IP) para la telemetría "ciudad · hora" del sitio
+  app.get('/api/geo', async (req, res) => {
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.json(await lookupIp(req.ip));
+  });
+  app.get('/api/media/:id', async (req, res) => {
+    const file = await storage.getMedia(req.params.id);
+    if (!file) return res.status(404).json({ message: "No encontrado" });
+    // El id nunca cambia de contenido: caché de un año en navegador y CDN
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.type(file.mimeType).send(Buffer.from(file.data, 'base64'));
+  });
   app.get('/api/posts/:id', async (req, res) => {
     try {
       const result = await storage.getPostById(req.params.id);
       if (!result) return res.status(404).json({ message: "No encontrado" });
-      res.json(result);
+      const { current, prev, next } = result;
+      res.json({ current, prev: prev && toPostSummary(prev), next: next && toPostSummary(next) });
     } catch { res.status(500).json({ message: "Error" }); }
   });
 
@@ -340,7 +389,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.post('/api/auth/logout', (req, res) => { req.session.destroy(() => res.json({ message: "Cerrado" })); });
   app.get('/api/auth/me', async (req, res) => {
-    if (!req.session.userId) return res.status(401).json({ user: null });
+    // Sin sesión no es un error: 200 con user null (evita un 401 en consola en cada visita)
+    if (!req.session.userId) return res.json({ user: null });
     const user = await storage.getUserById(req.session.userId);
     res.json({ user: user ? toPublicUser(user) : null });
   });

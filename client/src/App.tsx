@@ -5,7 +5,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import AppLayout from "@/components/layout/AppLayout";
-import { pageVariants } from "@/lib/motion";
+import { easeOutExpo, pageVariants } from "@/lib/motion";
 
 // --- PÁGINAS ---
 // Home se carga de inmediato (es la entrada habitual); el resto se divide en chunks
@@ -68,6 +68,15 @@ function App() {
         <AppLayout>
           {/* mode="wait": la página saliente termina su exit antes de montar la nueva.
               Al terminar el exit subimos el scroll, así la nueva página siempre entra arriba. */}
+          {/* Barra de señal: barrido naranja en cada cambio de ruta */}
+          <motion.div
+            key={`signal-${location}`}
+            aria-hidden
+            className="fixed inset-x-0 top-0 z-[70] h-[2px] origin-left bg-signal"
+            initial={{ scaleX: 0, opacity: 1 }}
+            animate={{ scaleX: 1, opacity: 0 }}
+            transition={{ scaleX: { duration: 0.7, ease: easeOutExpo }, opacity: { duration: 0.35, delay: 0.6 } }}
+          />
           <AnimatePresence mode="wait" initial={false} onExitComplete={() => window.scrollTo(0, 0)}>
             <motion.div
               key={location}

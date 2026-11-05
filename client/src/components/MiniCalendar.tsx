@@ -56,7 +56,7 @@ export default function MiniCalendar({
   };
 
   return (
-    <div className="bg-card border rounded-lg shadow-sm overflow-hidden">
+    <div className="overflow-hidden border border-rock/40 bg-card">
       {/* Cabecera */}
       <div className="p-4 flex items-center justify-between bg-muted/30 border-b">
         <div className="flex items-center gap-2">
@@ -108,14 +108,14 @@ export default function MiniCalendar({
               className={`
                 h-8 w-8 mx-auto flex items-center justify-center rounded-full text-sm transition-all relative
                 ${!isCurrentMonth ? 'text-muted-foreground/30' : ''}
-                ${isSelected ? 'bg-primary text-primary-foreground font-bold shadow-md scale-105' : 'hover:bg-muted'}
+                ${isSelected ? 'bg-foreground text-background font-medium' : 'hover:bg-muted'}
                 ${dayHasEvent && !isSelected ? 'font-bold text-primary' : ''}
-                ${isToday && !isSelected ? 'border border-primary/50' : ''} 
+                ${isToday && !isSelected ? 'ring-1 ring-signal' : ''} 
               `}
             >
               {format(day, 'd')}
               {dayHasEvent && !isSelected && (
-                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full"></span>
+                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-signal rounded-full"></span>
               )}
             </button>
           );

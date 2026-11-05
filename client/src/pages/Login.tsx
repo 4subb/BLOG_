@@ -25,8 +25,8 @@ function LoginPage() {
   return (
     <AuthShell>
         
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold tracking-[-0.03em] text-foreground">Iniciar Sesión</h2>
+        <div>
+          <h2 className="font-display text-4xl text-foreground">Iniciar Sesión</h2>
           <p className="mt-2 text-sm text-muted-foreground">Bienvenido de nuevo</p>
         </div>
 
@@ -67,7 +67,7 @@ function LoginPage() {
           <button 
             type="submit" 
             disabled={isLoading}
-            className="w-full h-10 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-[background-color,transform] duration-200 active:scale-[0.98] disabled:opacity-60"
+            className="w-full h-10 px-4 border border-transparent rounded-full text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-[background-color,transform] duration-200 active:scale-[0.98] disabled:opacity-60"
           >
             {isLoading ? "Entrando..." : "Entrar"}
           </button>

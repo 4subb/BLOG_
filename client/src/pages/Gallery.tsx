@@ -1,89 +1,80 @@
-import { useState, useEffect } from "react";
-import { type Post } from "@shared/schema";
-import { Image as ImageIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import PageHeader from "@/components/layout/PageHeader";
-import EmptyState from "@/components/layout/EmptyState";
-import { Stagger, StaggerItem } from "@/components/motion/Stagger";
-import { springSnappy } from "@/lib/motion";
+import EmptyMission from "@/components/mission/EmptyMission";
+import MissionHero from "@/components/mission/MissionHero";
+import { SectionHead } from "@/components/mission/primitives";
+import { ViewfinderSignature } from "@/components/mission/signatures";
+import { easeOutExpo } from "@/lib/motion";
+import { pad, updatedSpec, usePosts } from "@/lib/posts";
 
 export default function Gallery() {
   const { t } = useTranslation();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch('/api/posts/categoria/galeria', { credentials: 'include' });
-        if (!response.ok) throw new Error('Error');
-        const data: Post[] = await response.json();
-        setPosts(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchPosts();
-  }, []);
-
-  const viewPosts = posts.map(post => ({
-    ...post,
-    date: new Date(post.createdAt).toLocaleDateString(),
-    imageUrl: post.imageUrl || undefined,
-  }));
+  const { posts, isLoading } = usePosts("galeria");
 
   return (
     <>
-      <PageHeader icon={ImageIcon} eyebrow={t('nav.gallery')} title={t('pages.galleryTitle')} description={t('pages.gallerySubtitle')} />
+      <MissionHero
+        index="07"
+        label={t("nav.gallery")}
+        title={t("pages.galleryTitle")}
+        description={t("pages.gallerySubtitle")}
+        signature={<ViewfinderSignature />}
+        loading={isLoading}
+        specs={[
+          { label: t("ui.frames"), value: posts.length, pad: 3 },
+          updatedSpec(t("ui.updated"), posts[0]?.createdAt),
+        ]}
+        ghost="Exposure"
+      />
 
-      <section className="page-container py-14 sm:py-20">
+      <section className="page-container py-20 sm:py-28">
+        <SectionHead index="01" title={t("ui.frames")} aside={`${pad(posts.length, 3)} ${t("ui.frames")}`} className="mb-12" />
         {isLoading ? (
-          <div className="columns-1 gap-4 sm:columns-2 md:columns-3 lg:columns-4">
-            {[260, 180, 320, 220, 200, 280, 240, 190].map((h, i) => (
-              <div key={i} className="mb-4 animate-pulse rounded-xl bg-muted" style={{ height: h }} />
+          <div className="columns-1 gap-6 sm:columns-2 lg:columns-3">
+            {[260, 180, 320, 220, 200, 280].map((h, i) => (
+              <div key={i} className="mb-6 animate-pulse bg-muted" style={{ height: h }} />
             ))}
           </div>
-        ) : viewPosts.length === 0 ? (
-          <EmptyState icon={ImageIcon} text="No hay imágenes todavía." />
+        ) : posts.length === 0 ? (
+          <EmptyMission />
         ) : (
-          <Stagger stagger={0.05} className="columns-1 gap-4 sm:columns-2 md:columns-3 lg:columns-4">
-            {viewPosts.map((post) => (
-              <StaggerItem key={post.id} className="mb-4 break-inside-avoid">
-                <Link href={`/post/${post.id}`} className="block rounded-xl">
-                  <motion.div
-                    whileHover={{ scale: 1.015 }}
-                    whileTap={{ scale: 0.985 }}
-                    transition={springSnappy}
-                    className="group relative cursor-pointer overflow-hidden rounded-xl border border-border/60 bg-muted"
-                  >
-                    {post.imageUrl ? (
-                      <img
-                        src={post.imageUrl}
-                        alt={post.title}
-                        loading="lazy"
-                        className="h-auto w-full object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.04]"
-                      />
-                    ) : (
-                      <div className="flex h-48 w-full items-center justify-center">
-                        <span className="px-4 text-center text-sm font-medium">{post.title}</span>
-                      </div>
-                    )}
-
-                    {/* Overlay al hover */}
-                    <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/10 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                      <h3 className="translate-y-2 truncate text-sm font-medium text-white transition-transform duration-300 ease-out-expo group-hover:translate-y-0">{post.title}</h3>
-                      <p className="translate-y-2 text-xs text-white/70 transition-transform [transition-delay:40ms] duration-300 ease-out-expo group-hover:translate-y-0">{post.date}</p>
-                    </div>
-                  </motion.div>
-                </Link>
-              </StaggerItem>
+          <div className="columns-1 gap-6 sm:columns-2 lg:columns-3">
+            {posts.map((post, i) => (
+              <Link key={post.id} href={`/post/${post.id}`} className="group mb-10 block break-inside-avoid">
+                <motion.div
+                  initial={{ clipPath: "inset(0% 100% 0% 0%)" }}
+                  whileInView={{ clipPath: "inset(0% 0% 0% 0%)" }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 1.3, ease: easeOutExpo, delay: (i % 3) * 0.12 }}
+                  className="relative overflow-hidden bg-muted"
+                >
+                  {post.imageUrl ? (
+                    <img
+                      src={post.imageUrl}
+                      alt={post.title}
+                      loading="lazy"
+                      className="h-auto w-full object-cover transition-transform duration-[1.2s] ease-out-expo group-hover:scale-[1.04]"
+                    />
+                  ) : (
+                    <div className="flex h-56 items-center justify-center p-6 text-center font-medium">{post.title}</div>
+                  )}
+                  {/* Marco de visor al hover */}
+                  <div className="pointer-events-none absolute inset-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <span className="absolute left-0 top-0 h-4 w-4 border-l border-t border-white" />
+                    <span className="absolute right-0 top-0 h-4 w-4 border-r border-t border-white" />
+                    <span className="absolute bottom-0 left-0 h-4 w-4 border-b border-l border-white" />
+                    <span className="absolute bottom-0 right-0 h-4 w-4 border-b border-r border-white" />
+                  </div>
+                </motion.div>
+                <div className="label-mono mt-3 flex justify-between gap-4 text-muted-foreground">
+                  <span className="text-foreground">Fig. {pad(i + 1)}</span>
+                  <span className="truncate transition-colors group-hover:text-signal">{post.title}</span>
+                  <span className="shrink-0">{post.dotDate}</span>
+                </div>
+              </Link>
             ))}
-          </Stagger>
+          </div>
         )}
       </section>
     </>

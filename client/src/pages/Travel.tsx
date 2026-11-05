@@ -1,90 +1,62 @@
-import { useState, useEffect } from "react";
-import { type Post } from "@shared/schema";
-import PostCard, { PostCardSkeleton } from "@/components/PostCard";
-import RecentPostsSidebar from "@/components/RecentPostsSidebar";
-import PageHeader from "@/components/layout/PageHeader";
-import EmptyState from "@/components/layout/EmptyState";
-import { Stagger, StaggerItem } from "@/components/motion/Stagger";
-import { Camera } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import PostCard, { PostCardSkeleton } from "@/components/PostCard";
+import EmptyMission from "@/components/mission/EmptyMission";
+import MissionHero from "@/components/mission/MissionHero";
+import IndexList from "@/components/mission/IndexList";
+import { SectionHead } from "@/components/mission/primitives";
+import { FlightSignature } from "@/components/mission/signatures";
+import { Stagger, StaggerItem } from "@/components/motion/Stagger";
+import { countryList, pad, usePosts } from "@/lib/posts";
 
 export default function Travel() {
   const { t } = useTranslation();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchTravelPosts = async () => {
-      try {
-        setIsLoading(true);
-        // Llamamos a la API de la categoría 'viajes'
-        const response = await fetch('/api/posts/categoria/viajes', {
-          credentials: 'include'
-        });
-
-        if (!response.ok) {
-          throw new Error('No se pudieron cargar los posts de viajes');
-        }
-
-        const data: Post[] = await response.json();
-        setPosts(data);
-
-      } catch (error) {
-        console.error("Error al cargar posts de viajes:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTravelPosts();
-  }, []);
-
-  const viewPosts = posts.map(post => ({
-    ...post,
-    date: new Date(post.createdAt).toLocaleDateString(),
-    excerpt: post.content.replace(/<[^>]*>?/gm, '').substring(0, 200) + "...", // Un poco más largo para vista de lista
-    imageUrl: post.imageUrl || undefined,
-    country: post.country || undefined,
-    tags: post.tags || []
-  }));
-
-  const recentPosts = viewPosts.slice(0, 3);
+  const { posts, isLoading } = usePosts("viajes");
+  const countries = countryList(posts);
 
   return (
     <>
-      <PageHeader
-        icon={Camera}
-        eyebrow={t('nav.travel')}
-        title="Viajes y Fotografía"
-        description="Aventuras, destinos increíbles y crónicas del mundo"
+      <MissionHero
+        index="05"
+        label={t("nav.travel")}
+        title={t("pages.travelTitle")}
+        description={t("pages.travelSubtitle")}
+        signature={<FlightSignature />}
+        loading={isLoading}
+        specs={[
+          { label: t("ui.entries"), value: posts.length, pad: 3 },
+          { label: t("ui.countries"), value: countries.length, pad: 2 },
+        ]}
+        ghost="Coordinates"
       />
 
-      <section className="page-container py-14 sm:py-20">
-        <div className="flex flex-col gap-12 lg:flex-row">
-          <div className="min-w-0 flex-1">
-            {isLoading ? (
-              <div className="space-y-5">
-                {[0, 1, 2].map((i) => <PostCardSkeleton key={i} layout="list" />)}
-              </div>
-            ) : viewPosts.length === 0 ? (
-              <EmptyState icon={Camera} text="No hay posts de viajes todavía. ¡Comparte tu aventura!" />
-            ) : (
-              <Stagger className="space-y-5">
-                {viewPosts.map((post) => (
-                  <StaggerItem key={post.id}>
-                    <PostCard {...post} layout="list" />
-                  </StaggerItem>
-                ))}
-              </Stagger>
-            )}
-          </div>
+      {/* Bitácora de destinos: índice con vista previa flotante */}
+      {countries.length > 0 && (
+        <section className="page-container py-20 sm:py-28">
+          <SectionHead index="01" title={t("ui.countries")} aside={`${pad(countries.length)} ${t("ui.countries")}`} className="mb-6" />
+          <IndexList
+            rows={countries.map((country, i) => {
+              const first = country.posts[0];
+              return { key: country.key, href: `/post/${first.id}`, index: pad(i + 1), title: country.label, meta: `${pad(country.posts.length, 3)} ${t("ui.entries")}`, image: first.imageUrl };
+            })}
+          />
+        </section>
+      )}
 
-          <aside className="w-full lg:w-72 lg:shrink-0">
-            <div className="sticky top-24">
-              <RecentPostsSidebar posts={recentPosts} />
-            </div>
-          </aside>
-        </div>
+      <section className="page-container pb-24 pt-4 sm:pb-32">
+        <SectionHead index={countries.length > 0 ? "02" : "01"} title={t("ui.latest")} aside={`${pad(posts.length, 3)} ${t("ui.entries")}`} className="mb-12" />
+        {isLoading ? (
+          <div className="space-y-14">{[0, 1].map((i) => <PostCardSkeleton key={i} layout="list" />)}</div>
+        ) : posts.length === 0 ? (
+          <EmptyMission />
+        ) : (
+          <Stagger className="space-y-16">
+            {posts.map((post, i) => (
+              <StaggerItem key={post.id}>
+                <PostCard {...post} index={i + 1} layout="list" />
+              </StaggerItem>
+            ))}
+          </Stagger>
+        )}
       </section>
     </>
   );

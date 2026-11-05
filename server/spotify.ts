@@ -24,6 +24,7 @@ const SCOPES = [
   'user-read-playback-state',
   'user-modify-playback-state',
   'user-read-currently-playing',
+  'user-read-recently-played',
   'streaming',
   'user-read-email',
   'user-read-private',
@@ -206,36 +207,64 @@ router.put('/player/transfer', async (req: Request, res: ExpressResponse) => {
   res.json({ ok: r.ok || r.status === 204 });
 });
 
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Canciones para arrancar cuando no hay nada que reanudar: escuchadas recientemente
+// (scope nuevo, puede faltar en conexiones antiguas) y si no, las canciones guardadas.
+async function fallbackUris(req: Request): Promise<string[]> {
+  const recent = await spotifyFetch(req, '/me/player/recently-played?limit=20');
+  if (recent?.ok) {
+    const data = await recent.json() as { items?: { track?: { uri?: string } }[] };
+    const uris = Array.from(new Set((data.items ?? []).map((i) => i.track?.uri).filter((u): u is string => !!u)));
+    if (uris.length) return uris;
+  }
+  const saved = await spotifyFetch(req, '/me/tracks?limit=50');
+  if (saved?.ok) {
+    const data = await saved.json() as { items?: { track?: { uri?: string } }[] };
+    return (data.items ?? []).map((i) => i.track?.uri).filter((u): u is string => !!u);
+  }
+  return [];
+}
+
+// Lee el motivo de error de Spotify (p. ej. PREMIUM_REQUIRED, NO_ACTIVE_DEVICE)
+async function spotifyReason(r: FetchResponse): Promise<string | undefined> {
+  const body = await r.json().catch(() => null) as { error?: { reason?: string; message?: string } } | null;
+  return body?.error?.reason || body?.error?.message;
+}
+
 router.post('/player/play', async (req: Request, res: ExpressResponse) => {
   const { device_id, context_uri, uris } = req.body || {};
-  const url = device_id ? `/me/player/play?device_id=${device_id}` : '/me/player/play';
+  const url = device_id ? `/me/player/play?device_id=${encodeURIComponent(device_id)}` : '/me/player/play';
 
-  // Build body: if context_uri or uris provided, use those; otherwise try empty resume
-  const playBody: Record<string, any> = {};
+  // Sin context_uri/uris = reanudar lo que estaba sonando (en este dispositivo si se pasa device_id)
+  const playBody: Record<string, unknown> = {};
   if (context_uri) playBody.context_uri = context_uri;
   if (uris) playBody.uris = uris;
 
-  let r = await spotifyFetch(req, url, { method: 'PUT', body: JSON.stringify(playBody) });
+  const play = (body: Record<string, unknown>) => spotifyFetch(req, url, { method: 'PUT', body: JSON.stringify(body) });
+
+  let r = await play(playBody);
   if (!r) return res.status(401).json({ error: 'Not authenticated' });
 
-  // If resume failed (403 = no active context), try fetching recently played to start something
-  if (r.status === 403 || r.status === 404) {
-    const recentRes = await spotifyFetch(req, '/me/player/recently-played?limit=10');
-    if (recentRes && recentRes.ok) {
-      const recent = await recentRes.json() as { items: { track: { uri: string } }[] };
-      const trackUris = recent.items?.map((i: { track: { uri: string } }) => i.track.uri).filter(Boolean);
-      if (trackUris?.length) {
-        r = await spotifyFetch(req, url, {
-          method: 'PUT',
-          body: JSON.stringify({ uris: trackUris }),
-        });
-        if (!r) return res.status(500).json({ error: 'Spotify retry failed' });
-        return res.json({ ok: r.ok || r.status === 204, started_with: 'recently_played' });
-      }
+  // Un reproductor web recién creado tarda unos segundos en aparecer en Spotify: 404 "Device not found"
+  for (let attempt = 0; r.status === 404 && device_id && attempt < 3; attempt++) {
+    await wait(700 * (attempt + 1));
+    r = (await play(playBody)) ?? r;
+  }
+
+  // Nada que reanudar (403/404 sin contexto): arrancar con canciones recientes o guardadas
+  if (!r.ok && (r.status === 403 || r.status === 404) && !context_uri && !uris) {
+    const reason = await spotifyReason(r.clone());
+    if (reason === 'PREMIUM_REQUIRED') return res.status(403).json({ ok: false, reason });
+    const fallback = await fallbackUris(req);
+    if (fallback.length) {
+      r = (await play({ uris: fallback })) ?? r;
+      if (r.ok) return res.json({ ok: true, started_with: 'fallback' });
     }
   }
 
-  res.json({ ok: r.ok || r.status === 204 });
+  if (r.ok) return res.json({ ok: true });
+  res.status(r.status).json({ ok: false, reason: await spotifyReason(r) });
 });
 
 router.post('/player/pause', async (req: Request, res: ExpressResponse) => {

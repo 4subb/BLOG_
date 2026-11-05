@@ -1,3 +1,4 @@
+import PageIntro from "@/components/mission/PageIntro";
 import React, { useState, useEffect } from 'react';
 import { useRoute, useLocation } from 'wouter'; 
 import { postCategoryEnum, type Post } from '@shared/schema';
@@ -112,9 +113,9 @@ export default function EditPostPage() {
 
   return (
     <div className="flex-1">
-      <main className="px-5 py-14 sm:px-8 sm:py-20">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-semibold tracking-[-0.03em] mb-8">Editar Post</h1>
+      <main className="page-container pb-24 pt-8 sm:pt-10">
+        <PageIntro index="A2" label="Admin / Editor" title="Editar entrada" />
+        <div className="max-w-3xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required/></div>
             

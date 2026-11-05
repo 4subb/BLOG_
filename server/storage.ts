@@ -5,7 +5,8 @@ import {
   comments, type Comment, type InsertComment,
   postLikes, savedPosts,
   appRankings, appSchedule, type AppRanking, type InsertAppRanking, type AppEvent, type InsertAppEvent, gymLogs, type GymLog, type InsertGymLog,
-  spotifyTokens, type SpotifyToken
+  spotifyTokens, type SpotifyToken,
+  media, type Media
 } from "@shared/schema";
 import { db } from "./db"; 
 import { eq, sql, desc, and, ne, lt, gt, asc } from "drizzle-orm"; 
@@ -61,6 +62,10 @@ export interface IStorage {
   getSpotifyToken(userId: string): Promise<SpotifyToken | undefined>;
   upsertSpotifyToken(token: Omit<SpotifyToken, 'updatedAt'>): Promise<void>;
   deleteSpotifyToken(userId: string): Promise<void>;
+
+  // Imágenes de posts
+  createMedia(mimeType: string, data: string): Promise<string>;
+  getMedia(id: string): Promise<Media | undefined>;
 }
 
 export class DrizzleStorage implements IStorage {
@@ -170,6 +175,17 @@ export class DrizzleStorage implements IStorage {
 
   async deleteSpotifyToken(userId: string): Promise<void> {
     await db.delete(spotifyTokens).where(eq(spotifyTokens.userId, userId));
+  }
+
+  // --- Imágenes de posts ---
+  async createMedia(mimeType: string, data: string): Promise<string> {
+    const [row] = await db.insert(media).values({ mimeType, data }).returning({ id: media.id });
+    return row.id;
+  }
+
+  async getMedia(id: string): Promise<Media | undefined> {
+    const [row] = await db.select().from(media).where(eq(media.id, id)).limit(1);
+    return row;
   }
 }
 export const storage = new DrizzleStorage();

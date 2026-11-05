@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRoute } from "wouter";
-import { type Post } from "@shared/schema";
+import { type Post, type PostSummary } from "@shared/schema";
 import { Link } from "wouter";
 import { motion, useScroll, useSpring } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -12,15 +12,19 @@ import CommentSection from "@/components/CommentSection";
 import DOMPurify from 'dompurify';
 import NavButton from "@/components/NavButton";
 import { SmartMedia } from "@/components/SmartMedia"; // 🟢 CONEXIÓN CDN: Importamos el componente inteligente
-import { Stagger, StaggerItem } from "@/components/motion/Stagger";
+import { useTranslation } from "react-i18next";
+import { LiveClock, Rule, SectionHead, SplitReveal } from "@/components/mission/primitives";
+import { easeOutExpo } from "@/lib/motion";
+import { dotDate, stripHtml } from "@/lib/posts";
 
 type PostData = {
   current: Post;
-  prev?: Post;
-  next?: Post;
+  prev?: PostSummary;
+  next?: PostSummary;
 };
 
 export default function PostDetails() {
+  const { t } = useTranslation();
   const [, params] = useRoute("/post/:id");
   const postId = params?.id;
 
@@ -71,7 +75,7 @@ export default function PostDetails() {
   if (isLoading) {
     return (
       <div className="mx-auto w-full max-w-3xl px-5 py-16 sm:px-8">
-        <div className="mb-8 h-4 w-32 animate-pulse rounded bg-muted" />
+        <div className="mb-8 h-3 w-32 animate-pulse bg-muted" />
         <div className="mb-4 h-10 w-4/5 animate-pulse rounded bg-muted" />
         <div className="mb-10 h-10 w-3/5 animate-pulse rounded bg-muted" />
         <div className="aspect-[16/9] w-full animate-pulse rounded-xl bg-muted" />
@@ -88,101 +92,107 @@ export default function PostDetails() {
   }
 
   const { current: post, prev, next } = data;
-  const formattedDate = new Date(post.createdAt).toLocaleDateString();
+  const readMinutes = Math.max(1, Math.round(stripHtml(post.content).split(" ").length / 200));
+  const specs = [
+    { label: t("ui.category"), value: post.category },
+    { label: t("ui.date"), value: dotDate(post.createdAt) },
+    { label: t("ui.country"), value: post.country || "—" },
+    { label: t("ui.minRead"), value: `${String(readMinutes).padStart(2, "0")} min` },
+  ];
 
   return (
     <>
       <motion.div
         aria-hidden
         style={{ scaleX: readingProgress }}
-        className="fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-foreground"
+        className="fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-signal"
       />
 
-      <article className="mx-auto w-full max-w-3xl px-5 pb-24 pt-12 sm:px-8 sm:pt-16">
-        <Stagger stagger={0.08}>
-          <StaggerItem>
-            <button
-              onClick={() => window.history.back()}
-              className="group mb-10 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5" /> Volver
+      <article>
+        <header className="page-container pb-12 pt-8 sm:pt-10">
+          <div className="label-mono flex items-center justify-between gap-4 text-muted-foreground">
+            <button onClick={() => window.history.back()} className="group inline-flex items-center gap-2 transition-colors hover:text-foreground">
+              <ArrowLeft className="h-3.5 w-3.5 transition-transform duration-300 group-hover:-translate-x-0.5" /> {t("ui.back")}
             </button>
-          </StaggerItem>
-
-          <StaggerItem className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-            <span className="font-mono text-xs uppercase tracking-[0.12em] text-foreground/80">{post.category}</span>
-            <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/60" />
-            <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {formattedDate}</span>
-            {post.country && (
-              <>
-                <span className="h-0.5 w-0.5 rounded-full bg-muted-foreground/60" />
-                <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {post.country}</span>
-              </>
-            )}
-          </StaggerItem>
-
-          <StaggerItem>
-            <h1 className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl">{post.title}</h1>
-          </StaggerItem>
-
-          {/* Acciones */}
-          <StaggerItem className="mt-8 flex items-center gap-1 border-y border-border/60 py-2">
-            <LikeButton postId={post.id} />
-            <BookmarkButton postId={post.id} />
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleShare}
-              className="relative ml-auto overflow-hidden"
-              title="Compartir"
-            >
-              {copied ? (
-                <Check className="h-4 w-4 text-emerald-500 animate-in zoom-in duration-300" />
-              ) : (
-                <Send
-                  className={`h-4 w-4 transition-all duration-700 ${isFlying ? "animate-fly" : ""}`}
-                />
-              )}
-            </Button>
-          </StaggerItem>
-
-          {/* 🟢 SECCIÓN MULTIMEDIA INTELIGENTE CONECTADA A TU CDN */}
-          {post.imageUrl && (
-            <StaggerItem className="mt-10 overflow-hidden rounded-xl border border-border/60 bg-muted/40">
-              <SmartMedia
-                src={post.imageUrl}
-                alt={post.title}
-                className="mx-auto block h-auto max-h-[650px] w-full object-contain"
-              />
-            </StaggerItem>
-          )}
-
-          <StaggerItem>
-            <div
-              className="ql-editor prose prose-neutral mt-12 max-w-none px-0 dark:prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-a:underline-offset-4 prose-img:rounded-xl md:prose-lg"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
-            />
-          </StaggerItem>
-        </Stagger>
-
-        {/* Tags */}
-        {post.tags && post.tags.length > 0 && (
-          <div className="mt-14 flex flex-wrap gap-2">
-            {post.tags.map((tag, i) => (
-              <Badge key={i} variant="outline" className="rounded-full font-normal text-muted-foreground">#{tag}</Badge>
-            ))}
+            <LiveClock className="hidden sm:inline" />
           </div>
+
+          <h1 className="font-display mt-14 max-w-[18ch] text-[clamp(2.6rem,7vw,7rem)] sm:mt-20">
+            <SplitReveal text={post.title} stagger={0.04} />
+          </h1>
+
+          <dl className="mt-14 grid grid-cols-2 gap-x-6 sm:grid-cols-4 sm:gap-x-10">
+            {specs.map((spec, i) => (
+              <div key={spec.label} className="pb-4">
+                <Rule delay={0.2 + i * 0.08} />
+                <dt className="label-mono pt-3 text-muted-foreground">{spec.label}</dt>
+                <dd className="mt-2 truncate text-lg first-letter:uppercase">{spec.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </header>
+
+        {/* 🟢 SECCIÓN MULTIMEDIA INTELIGENTE CONECTADA A TU CDN */}
+        {post.imageUrl && (
+          <motion.div
+            initial={{ clipPath: "inset(0% 0% 100% 0%)" }}
+            animate={{ clipPath: "inset(0% 0% 0% 0%)" }}
+            transition={{ duration: 1.4, ease: easeOutExpo, delay: 0.35 }}
+            className="page-container"
+          >
+            <div className="overflow-hidden bg-muted">
+              <SmartMedia src={post.imageUrl} alt={post.title} className="mx-auto block max-h-[80vh] w-full object-cover" />
+            </div>
+          </motion.div>
         )}
 
+        <div className="page-container grid gap-12 py-16 sm:py-24 lg:grid-cols-12">
+          {/* Columna de acciones (sticky) */}
+          <aside className="lg:col-span-3">
+            <div className="flex items-center gap-1 lg:sticky lg:top-24 lg:flex-col lg:items-start">
+              <p className="label-mono mb-2 hidden text-muted-foreground lg:block">{t("ui.connect")}</p>
+              <div className="flex items-center gap-1">
+                <LikeButton postId={post.id} />
+                <BookmarkButton postId={post.id} />
+                <Button variant="ghost" size="icon" onClick={handleShare} className="relative overflow-hidden" title="Compartir">
+                  {copied ? (
+                    <Check className="h-4 w-4 text-signal animate-in zoom-in duration-300" />
+                  ) : (
+                    <Send className={`h-4 w-4 transition-all duration-700 ${isFlying ? "animate-fly" : ""}`} />
+                  )}
+                </Button>
+              </div>
+              {post.tags && post.tags.length > 0 && (
+                <div className="ml-auto flex flex-wrap gap-x-3 gap-y-1 lg:ml-0 lg:mt-6">
+                  {post.tags.map((tag, i) => (
+                    <span key={i} className="label-mono text-muted-foreground">#{tag.replace(/^#+/, "")}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </aside>
+
+          <div className="min-w-0 lg:col-span-8">
+            <div
+              className="ql-editor prose prose-neutral max-w-none px-0 text-foreground/90 dark:prose-invert prose-headings:font-medium prose-headings:tracking-tight prose-a:text-signal prose-a:underline-offset-4 prose-img:rounded-none md:prose-lg"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
+            />
+          </div>
+        </div>
+
         {/* Navegación */}
-        <div className="mt-16 grid grid-cols-1 gap-4 border-t border-border/60 pt-12 md:grid-cols-2">
-          <NavButton post={prev} direction="prev" />
-          <NavButton post={next} direction="next" />
+        <div className="page-container pb-16">
+          <SectionHead index="→" title={`${t("ui.prev")} / ${t("ui.next")}`} className="mb-8" />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <NavButton post={prev} direction="prev" />
+            <NavButton post={next} direction="next" />
+          </div>
         </div>
 
         {/* Comentarios */}
-        <div className="mt-16"> <CommentSection postId={post.id} /> </div>
+        <div className="page-container pb-24">
+          <div className="max-w-3xl"><CommentSection postId={post.id} /></div>
+        </div>
       </article>
     </>
   );

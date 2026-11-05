@@ -78,8 +78,11 @@
   margin: 0;
   padding: 0 6%;
   text-align: center;
-  font-size: var(--se-title-size);
-  font-weight: 700;
+  /* Escala con el viewport para no desbordar la tarjeta cuando aún es pequeña */
+  font-size: clamp(1.25rem, 2.2vw, var(--se-title-size));
+  font-family: 'Archivo', system-ui, sans-serif;
+  font-variation-settings: "wdth" 112;
+  font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1;
   color: #fff;

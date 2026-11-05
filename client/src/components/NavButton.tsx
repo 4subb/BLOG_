@@ -1,12 +1,12 @@
 // client/src/components/NavButton.tsx
 
 import { Link } from "wouter";
-import { type Post } from "@shared/schema";
+import { type PostSummary } from "@shared/schema";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils"; // Usamos 'cn' para combinar clases condicionalmente
 
 interface NavButtonProps {
-  post?: Post; // El post al que enlaza (puede ser undefined)
+  post?: PostSummary; // El post al que enlaza (puede ser undefined)
   direction: "prev" | "next"; // La dirección del botón
 }
 

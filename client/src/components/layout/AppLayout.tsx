@@ -13,11 +13,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative flex min-h-screen flex-col">
-      {/* Halo superior muy tenue: da profundidad sin competir con el contenido */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(60%_60%_at_50%_0%,hsl(var(--foreground)/0.06),transparent)]"
-      />
       {!chromeless && <Header />}
       <main className="relative flex flex-1 flex-col">{children}</main>
       {!chromeless && <Footer />}
