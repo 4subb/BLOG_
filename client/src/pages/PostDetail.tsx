@@ -141,7 +141,7 @@ export default function PostDetails() {
             className="page-container"
           >
             <div className="overflow-hidden bg-muted">
-              <SmartMedia src={post.imageUrl} alt={post.title} className="mx-auto block max-h-[80vh] w-full object-cover" />
+              <SmartMedia src={post.imageUrl} alt={post.title} loading="eager" className="mx-auto block max-h-[80vh] w-full object-cover" />
             </div>
           </motion.div>
         )}

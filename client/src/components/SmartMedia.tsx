@@ -4,17 +4,22 @@ interface SmartMediaProps {
   src: string | null | undefined;
   alt?: string;
   className?: string;
+  loading?: "lazy" | "eager"; // eager para imágenes de portada (visibles al cargar)
 }
 
 export const SmartMedia: React.FC<SmartMediaProps> = ({ 
   src, 
   alt = "Contenido multimedia", 
-  className = "w-full h-auto rounded-lg shadow-md" 
+  className = "w-full h-auto rounded-lg shadow-md",
+  loading = "lazy",
 }) => {
   if (!src) return <div className="bg-muted animate-pulse rounded-lg w-full h-48 flex items-center justify-center text-muted-foreground">Sin multimedia</div>;
 
   const baseUrl = import.meta.env.VITE_CDN_URL || "";
-  const finalSrc = src.startsWith("http") ? src : `${baseUrl}${src.startsWith("/") ? "" : "/"}${src}`;
+  // URLs absolutas, data: y las que sirve este mismo servidor (/api/media/...) van tal cual;
+  // solo las rutas de archivos sueltos se resuelven contra la CDN
+  const isOwnOrAbsolute = /^(https?:|data:|\/api\/)/.test(src);
+  const finalSrc = isOwnOrAbsolute ? src : `${baseUrl}${src.startsWith("/") ? "" : "/"}${src}`;
 
   const isVideo = finalSrc.match(/\.(mp4|webm|ogg)$/i);
 
@@ -30,7 +35,7 @@ export const SmartMedia: React.FC<SmartMediaProps> = ({
     <img 
       src={finalSrc} 
       alt={alt} 
-      loading="lazy" 
+      loading={loading}
       className={className} 
       onError={(e) => {
         (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Error+desde+Server";
