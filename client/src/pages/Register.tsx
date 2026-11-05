@@ -59,7 +59,7 @@ function RegisterPage() {
       // Manejo inteligente de errores del servidor
       const msg = error.message || "";
       
-      if (msg.includes("ya está registrado") || msg.includes("Existe") || msg.includes("duplicate")) {
+      if (msg.includes("ya está registrado") || msg.includes("Ya existe") || msg.includes("Existe") || msg.includes("duplicate")) {
         setErrors({ 
           email: "duplicate" // Marca especial para mostrar el link de login
         });
@@ -106,6 +106,10 @@ function RegisterPage() {
               <input 
                 type="email" 
                 required 
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 // Si hay error, borde rojo y texto rojo
                 className={cn(
                   "mt-1 block w-full h-10 px-3 bg-background text-sm border rounded-md outline-none transition-[border-color,box-shadow] focus:border-foreground/40 focus:ring-4 focus:ring-ring/15 transition-colors",

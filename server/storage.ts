@@ -70,7 +70,7 @@ export interface IStorage {
 
 export class DrizzleStorage implements IStorage {
   // --- Usuarios ---
-  async getUserByEmail(email: string): Promise<User | undefined> { const result = await db.select().from(users).where(eq(users.email, email)).limit(1); return result[0]; }
+  async getUserByEmail(email: string): Promise<User | undefined> { const result = await db.select().from(users).where(sql`lower(${users.email}) = ${email.trim().toLowerCase()}`).limit(1); return result[0]; }
   async getUserById(id: string): Promise<User | undefined> { const result = await db.select().from(users).where(eq(users.id, id)).limit(1); return result[0]; }
   async createUser(user: InsertUser): Promise<User> { const result = await db.insert(users).values(user).returning(); return result[0]; }
   async getUsers(): Promise<{ id: string; email: string; role: "admin" | "user"; }[]> { const result = await db.select({ id: users.id, email: users.email, role: users.role }).from(users).orderBy(users.email); return result; }

@@ -37,6 +37,10 @@ function LoginPage() {
               <input 
                 type="email" 
                 required 
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 className="mt-1 block w-full h-10 px-3 bg-background text-sm border border-input rounded-md outline-none transition-[border-color,box-shadow] focus:border-foreground/40 focus:ring-4 focus:ring-ring/15"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -49,6 +53,7 @@ function LoginPage() {
                 <input 
                   type={showPassword ? "text" : "password"} 
                   required 
+                  autoComplete="current-password"
                   className="block w-full h-10 px-3 bg-background text-sm border border-input rounded-md pr-10 outline-none transition-[border-color,box-shadow] focus:border-foreground/40 focus:ring-4 focus:ring-ring/15"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

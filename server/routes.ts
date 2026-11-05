@@ -17,10 +17,12 @@ import {
   insertBucketListSchema
 } from '@shared/schema'; 
 
-const loginSchema = z.object({ email: z.string().email(), password: z.string().min(8) });
+// Correo normalizado: los teclados móviles ponen mayúscula inicial o un espacio al final
+const emailField = z.string().trim().toLowerCase().email();
+const loginSchema = z.object({ email: emailField, password: z.string().min(1) });
 
 const registerSchema = z.object({ 
-  email: z.string().email(), 
+  email: emailField, 
   password: z.string().min(8),
   username: z.string().min(3).optional()
 });
@@ -373,7 +375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const val = registerSchema.safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
     
-    if (await storage.getUserByEmail(val.data.email)) return res.status(409).json({ message: "Existe" });
+    if (await storage.getUserByEmail(val.data.email)) return res.status(409).json({ message: "Ya existe una cuenta con ese correo" });
     
     const password_hash = await bcrypt.hash(val.data.password, 10);
     
@@ -389,9 +391,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/login', authLimiter, async (req, res) => {
     const val = loginSchema.safeParse(req.body);
-    if (!val.success) return res.status(400).json(val.error);
+    if (!val.success) return res.status(400).json({ message: "Escribe un correo válido y tu contraseña" });
     const user = await storage.getUserByEmail(val.data.email);
-    if (!user || !(await bcrypt.compare(val.data.password, user.password_hash))) return res.status(401).json({ message: "Error" });
+    if (!user || !(await bcrypt.compare(val.data.password, user.password_hash))) return res.status(401).json({ message: "Correo o contraseña incorrectos" });
     await startSession(req, user);
     res.json({ message: "Login", user: toPublicUser(user) });
   });
