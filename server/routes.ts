@@ -71,12 +71,20 @@ function toPublicUser<T extends { password_hash?: string }>(user: T) {
   return rest;
 }
 
+// IP real del visitante. En Render el tráfico pasa por Cloudflare y por el balanceador de Render,
+// así que req.ip es la de un proxy; Cloudflare manda la del cliente en CF-Connecting-IP
+// (y la sobrescribe siempre, no se puede falsificar desde fuera).
+function clientIp(req: Request): string | undefined {
+  const cf = req.headers['cf-connecting-ip'];
+  return (typeof cf === 'string' && cf) || req.ip;
+}
+
 // Limitador en memoria para login/registro: 10 intentos por IP cada 15 min
 function rateLimit(max: number, windowMs: number): RequestHandler {
   const hits = new Map<string, { count: number; resetAt: number }>();
   return (req, res, next) => {
     const now = Date.now();
-    const key = req.ip || 'unknown';
+    const key = clientIp(req) || 'unknown';
     const entry = hits.get(key);
     if (!entry || entry.resetAt < now) {
       hits.set(key, { count: 1, resetAt: now + windowMs });
@@ -305,7 +313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ubicación aproximada del visitante (por IP) para la telemetría "ciudad · hora" del sitio
   app.get('/api/geo', async (req, res) => {
     res.setHeader('Cache-Control', 'private, max-age=3600');
-    res.json(await lookupIp(req.ip));
+    res.json(await lookupIp(clientIp(req)));
   });
   app.get('/api/media/:id', async (req, res) => {
     const file = await storage.getMedia(req.params.id);
