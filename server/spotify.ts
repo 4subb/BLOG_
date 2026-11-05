@@ -315,27 +315,32 @@ router.put('/player/repeat', async (req: Request, res: ExpressResponse) => {
 });
 
 // --- LIBRARY ---
+// Desde febrero de 2026 Spotify eliminó /me/tracks (guardar/quitar/contains) para apps en
+// Development Mode; su reemplazo es /me/library, que recibe URIs (spotify:track:ID), no IDs.
+
+const TRACK_ID = /^[A-Za-z0-9]{22}$/;
+const trackUri = (id: unknown) => (typeof id === 'string' && TRACK_ID.test(id) ? `spotify:track:${id}` : null);
 
 router.get('/player/saved', async (req: Request, res: ExpressResponse) => {
-  const { ids } = req.query;
-  const r = await spotifyFetch(req, `/me/tracks/contains?ids=${ids}`);
+  const uri = trackUri(req.query.ids);
+  if (!uri) return res.status(400).json({ error: 'ID de canción inválido' });
+  const r = await spotifyFetch(req, `/me/library/contains?uris=${encodeURIComponent(uri)}`);
   if (!r) return res.status(401).json({ error: 'Not authenticated' });
-  const data = await r.json();
-  res.json(data);
+  if (!r.ok) return res.status(r.status).json({ error: 'Spotify error', reason: await spotifyReason(r) });
+  res.json(await r.json()); // [true|false]
 });
 
-router.put('/player/save', async (req: Request, res: ExpressResponse) => {
-  const { id } = req.body;
-  const r = await spotifyFetch(req, `/me/tracks?ids=${id}`, { method: 'PUT' });
-  if (!r) return res.status(401).json({ error: 'Not authenticated' });
-  res.json({ ok: r.ok });
-});
+async function setSaved(req: Request, res: ExpressResponse, method: 'PUT' | 'DELETE') {
+  const uri = trackUri(req.body?.id);
+  if (!uri) return res.status(400).json({ ok: false, error: 'ID de canción inválido' });
+  const r = await spotifyFetch(req, `/me/library?uris=${encodeURIComponent(uri)}`, { method });
+  if (!r) return res.status(401).json({ ok: false, error: 'Not authenticated' });
+  if (r.ok) return res.json({ ok: true });
+  // 403 típico: la conexión es anterior al permiso user-library-modify → reconectar
+  res.status(r.status).json({ ok: false, reason: await spotifyReason(r) });
+}
 
-router.delete('/player/save', async (req: Request, res: ExpressResponse) => {
-  const { id } = req.body;
-  const r = await spotifyFetch(req, `/me/tracks?ids=${id}`, { method: 'DELETE' });
-  if (!r) return res.status(401).json({ error: 'Not authenticated' });
-  res.json({ ok: r.ok });
-});
+router.put('/player/save', (req: Request, res: ExpressResponse) => setSaved(req, res, 'PUT'));
+router.delete('/player/save', (req: Request, res: ExpressResponse) => setSaved(req, res, 'DELETE'));
 
 export default router;

@@ -121,11 +121,19 @@ export function SpotifyPlayer() {
     setState(data);
     if (data.device?.volume_percent !== undefined) setVolume(data.device.volume_percent);
     setLocalProgress(data.progress_ms || 0);
-    if (data.item?.id) {
-      const saved = await api(`/player/saved?ids=${data.item.id}`);
-      if (Array.isArray(saved)) setLiked(saved[0]);
-    }
   }, []);
+
+  /* ── ¿La canción actual está en "Tus me gusta"? Se comprueba una vez por canción
+     (vale tanto si suena en este navegador como en otro dispositivo) ── */
+  const currentTrackId = state?.item?.id;
+  useEffect(() => {
+    if (!currentTrackId) return;
+    let cancelled = false;
+    api(`/player/saved?ids=${currentTrackId}`).then(saved => {
+      if (!cancelled && Array.isArray(saved)) setLiked(!!saved[0]);
+    });
+    return () => { cancelled = true; };
+  }, [currentTrackId]);
 
   /* ── Load Spotify Web Playback SDK (una sola vez por página) ── */
   const loadSDK = useCallback(() => {
@@ -660,7 +668,11 @@ export function SpotifyPlayer() {
                     onClick={async () => {
                       const next = !liked;
                       setLiked(next);
-                      await api('/player/save', next ? 'PUT' : 'DELETE', { id: track.id });
+                      const result = await api('/player/save', next ? 'PUT' : 'DELETE', { id: track.id });
+                      if (!result?.ok) {
+                        setLiked(!next); // Spotify no lo guardó: no mentir en el botón
+                        setError('No se pudo actualizar "Tus me gusta". Desconecta y vuelve a conectar Spotify para renovar los permisos.');
+                      }
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
                       ${liked ? 'bg-[#1DB954]/10 border-[#1DB954] text-[#1DB954]' : 'border-border text-muted-foreground hover:text-foreground'}`}
