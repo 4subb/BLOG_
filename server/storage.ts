@@ -62,6 +62,7 @@ export interface IStorage {
   getSpotifyToken(userId: string): Promise<SpotifyToken | undefined>;
   upsertSpotifyToken(token: Omit<SpotifyToken, 'updatedAt'>): Promise<void>;
   deleteSpotifyToken(userId: string): Promise<void>;
+  getSpotifyOwnerId(ownerEmail?: string): Promise<string | undefined>;
 
   // Imágenes de posts
   createMedia(mimeType: string, data: string): Promise<string>;
@@ -171,6 +172,15 @@ export class DrizzleStorage implements IStorage {
       target: spotifyTokens.userId,
       set: { refreshToken: token.refreshToken, accessToken: token.accessToken, expiresAt: token.expiresAt, updatedAt: new Date() },
     });
+  }
+
+  /** Cuenta cuyo Spotify se muestra en "Escuchando ahora": la del correo indicado o un admin conectado. */
+  async getSpotifyOwnerId(ownerEmail?: string): Promise<string | undefined> {
+    const base = db.select({ id: users.id }).from(users).innerJoin(spotifyTokens, eq(spotifyTokens.userId, users.id));
+    const [row] = ownerEmail
+      ? await base.where(sql`lower(${users.email}) = ${ownerEmail.trim().toLowerCase()}`).limit(1)
+      : await base.where(eq(users.role, 'admin')).orderBy(asc(users.created_at)).limit(1);
+    return row?.id;
   }
 
   async deleteSpotifyToken(userId: string): Promise<void> {

@@ -477,7 +477,8 @@ html {
     scroll-behavior: auto;
   }
   .animate-marquee,
-  .animate-blink {
+  .animate-blink,
+  .animate-eq {
     animation: none !important;
   }
 }

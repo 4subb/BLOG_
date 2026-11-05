@@ -207,6 +207,65 @@ router.put('/player/transfer', async (req: Request, res: ExpressResponse) => {
   res.json({ ok: r.ok || r.status === 204 });
 });
 
+// --- "ESCUCHANDO AHORA" (público) ---
+// Lo que suena en la cuenta del dueño del sitio, visible para cualquier visitante sin conectar nada.
+// Solo se expone lo necesario para el widget (nada de IDs de usuario, dispositivos ni tokens) y se
+// cachea unos segundos para que muchas visitas no agoten el límite de peticiones de Spotify.
+
+type NowPlaying =
+  | { status: 'playing' | 'recent'; track: { name: string; artists: string; image?: string; url?: string }; progressMs?: number; durationMs?: number; playedAt?: string }
+  | { status: 'off' };
+
+const NOW_PLAYING_TTL = 15_000;
+let nowPlayingCache: { data: NowPlaying; expiresAt: number } | null = null;
+let nowPlayingPending: Promise<NowPlaying> | null = null;
+
+type ApiTrack = { name?: string; artists?: { name: string }[]; album?: { images?: { url: string; width?: number }[] }; external_urls?: { spotify?: string } };
+function publicTrack(t: ApiTrack) {
+  // La portada más pequeña que siga nítida en pantallas retina (≥128 px; Spotify da 64, 300 y 640)
+  const images = [...(t.album?.images ?? [])].sort((a, b) => (a.width ?? 0) - (b.width ?? 0));
+  const image = images.find((i) => (i.width ?? 0) >= 128)?.url ?? images[images.length - 1]?.url;
+  return { name: t.name ?? '', artists: (t.artists ?? []).map((a) => a.name).join(', '), image, url: t.external_urls?.spotify };
+}
+
+async function ownerFetch(token: string, path: string) {
+  return fetch(`https://api.spotify.com/v1${path}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(5000) });
+}
+
+async function loadNowPlaying(): Promise<NowPlaying> {
+  const ownerId = await storage.getSpotifyOwnerId(process.env.SPOTIFY_OWNER_EMAIL || undefined);
+  if (!ownerId) return { status: 'off' };
+  const token = await getAccessToken(ownerId);
+  if (!token) return { status: 'off' };
+
+  const current = await ownerFetch(token, '/me/player/currently-playing?additional_types=track');
+  if (current.status === 200) {
+    const data = await current.json() as { is_playing?: boolean; progress_ms?: number; currently_playing_type?: string; item?: ApiTrack & { duration_ms?: number } };
+    if (data.is_playing && data.item && data.currently_playing_type === 'track') {
+      return { status: 'playing', track: publicTrack(data.item), progressMs: data.progress_ms, durationMs: data.item.duration_ms };
+    }
+  }
+  // Nada sonando: la última canción escuchada (requiere user-read-recently-played; si falta, se oculta)
+  const recent = await ownerFetch(token, '/me/player/recently-played?limit=1');
+  if (recent.ok) {
+    const data = await recent.json() as { items?: { track?: ApiTrack; played_at?: string }[] };
+    const last = data.items?.[0];
+    if (last?.track) return { status: 'recent', track: publicTrack(last.track), playedAt: last.played_at };
+  }
+  return { status: 'off' };
+}
+
+router.get('/now-playing', async (_req: Request, res: ExpressResponse) => {
+  if (!nowPlayingCache || nowPlayingCache.expiresAt < Date.now()) {
+    nowPlayingPending ??= loadNowPlaying()
+      .catch((err) => { console.error('now-playing:', err); return { status: 'off' } as NowPlaying; })
+      .finally(() => { nowPlayingPending = null; });
+    nowPlayingCache = { data: await nowPlayingPending, expiresAt: Date.now() + NOW_PLAYING_TTL };
+  }
+  res.setHeader('Cache-Control', 'public, max-age=15');
+  res.json(nowPlayingCache.data);
+});
+
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Canciones para arrancar cuando no hay nada que reanudar: escuchadas recientemente

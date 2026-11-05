@@ -101,6 +101,11 @@ export default {
           "0%, 49%": { opacity: "1" },
           "50%, 100%": { opacity: "0" },
         },
+        // Barras de ecualizador de "Escuchando ahora"
+        eq: {
+          "0%, 100%": { transform: "scaleY(0.3)" },
+          "50%": { transform: "scaleY(1)" },
+        },
         "accordion-down": {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
@@ -116,6 +121,7 @@ export default {
       animation: {
         marquee: "marquee 40s linear infinite",
         blink: "blink 1.1s steps(1) infinite",
+        eq: "eq 0.9s ease-in-out infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },

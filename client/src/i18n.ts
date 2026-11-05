@@ -37,6 +37,8 @@ const resources = {
         homeIntro: "A personal mission log: projects, sports, journeys and readings in one place.",
         explore: "Explore",
         dispatch: "Field notes",
+        nowPlaying: "Listening now",
+        lastPlayed: "Last played",
       },
       hero: {
         badge: "Professional Portfolio",
@@ -217,6 +219,8 @@ const resources = {
         homeIntro: "Una bitácora personal de misión: proyectos, deporte, viajes y lecturas en un solo lugar.",
         explore: "Explorar",
         dispatch: "Bitácora",
+        nowPlaying: "Escuchando ahora",
+        lastPlayed: "Última escuchada",
       },
       hero: {
         badge: "Portafolio Profesional",

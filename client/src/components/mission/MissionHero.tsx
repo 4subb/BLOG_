@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { easeOutExpo } from "@/lib/motion";
 import { GhostWord, LiveClock, SpecSheet, SplitReveal, type Spec } from "./primitives";
+import NowPlaying from "./NowPlaying";
 
 interface MissionHeroProps {
   index: string;          // "02"
@@ -40,7 +41,10 @@ export default function MissionHero({ index, label, title, description, specs: a
             <span className="mx-2">/</span>
             {label}
           </span>
-          <LiveClock className="hidden sm:inline" />
+          <span className="hidden min-w-0 items-center gap-6 sm:flex">
+            <NowPlaying className="max-w-[34ch]" />
+            <LiveClock className="shrink-0" />
+          </span>
         </motion.div>
 
         <div className="mt-14 grid items-end gap-10 sm:mt-24 lg:grid-cols-12">

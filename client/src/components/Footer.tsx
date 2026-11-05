@@ -4,6 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import Marquee from "@/components/mission/Marquee";
 import { LiveClock, Rule } from "@/components/mission/primitives";
+import NowPlaying from "@/components/mission/NowPlaying";
 import { easeOutExpo } from "@/lib/motion";
 import { countryName, locationLabel, useVisitorLocation } from "@/lib/location";
 
@@ -86,6 +87,7 @@ export default function Footer() {
             <Rule className="mt-3" />
             <FooterLocation />
             <LiveClock className="label-mono mt-4 block text-muted-foreground" />
+            <NowPlaying variant="card" />
           </div>
         </div>
       </div>
