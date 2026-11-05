@@ -27,6 +27,15 @@ export function updatedSpec(label: string, d?: Date | string): Spec {
   return { label, value, unit: String(date.getFullYear()) };
 }
 
+/**
+ * Última actualización del sitio: lo más reciente entre el último cambio publicado (commit del
+ * build: diseño, CV, correo…) y el post más nuevo.
+ */
+export function siteUpdatedAt(posts: { createdAt: Date | string }[]): Date {
+  const dates = [new Date(__SITE_UPDATED_AT__), ...posts.map((p) => new Date(p.createdAt))];
+  return new Date(Math.max(...dates.map((d) => d.getTime()).filter((n) => !Number.isNaN(n))));
+}
+
 // --- Países ---
 // En la BD el país es texto libre ("México", "MÉXICO", "Mexico", "México, Argentina"):
 // se separa por comas y se normaliza (sin acentos, minúsculas) para contar y agrupar.

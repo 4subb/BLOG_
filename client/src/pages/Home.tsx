@@ -12,7 +12,7 @@ import PostCard, { PostCardSkeleton } from "@/components/PostCard";
 import { Button } from "@/components/ui/button";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { easeOutExpo } from "@/lib/motion";
-import { countryList, pad, updatedSpec, usePosts } from "@/lib/posts";
+import { countryList, pad, siteUpdatedAt, updatedSpec, usePosts } from "@/lib/posts";
 import miFoto from "@/assets/perfil.jpg";
 
 const sectionImages: Record<string, string> = {
@@ -85,7 +85,7 @@ export default function Home() {
           { label: t("ui.entries"), value: posts.length, pad: 3 },
           { label: t("ui.sections"), value: sections.length, pad: 2 },
           { label: t("ui.countries"), value: countries, pad: 2 },
-          updatedSpec(t("ui.updated"), posts[0]?.createdAt),
+          updatedSpec(t("ui.updated"), siteUpdatedAt(posts)),
         ]}
         ghost="Mission log"
       />
