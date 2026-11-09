@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { LiveClock, Rule, SectionHead, SplitReveal } from "@/components/mission/primitives";
 import { easeOutExpo } from "@/lib/motion";
 import { dotDate, stripHtml } from "@/lib/posts";
+import { useLang } from "@/lib/lang";
 
 type PostData = {
   current: Post;
@@ -25,6 +26,7 @@ type PostData = {
 
 export default function PostDetails() {
   const { t } = useTranslation();
+  const { L } = useLang();
   const [, params] = useRoute("/post/:id");
   const postId = params?.id;
 
@@ -85,8 +87,8 @@ export default function PostDetails() {
   if (error || !data) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 py-24 text-center">
-        <p className="text-lg font-medium">Post no encontrado.</p>
-        <Link href="/" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Volver al inicio</Link>
+        <p className="text-lg font-medium">{L("Post no encontrado.", "Post not found.")}</p>
+        <Link href="/" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">{L("Volver al inicio", "Back to home")}</Link>
       </div>
     );
   }
@@ -154,7 +156,7 @@ export default function PostDetails() {
               <div className="flex items-center gap-1">
                 <LikeButton postId={post.id} />
                 <BookmarkButton postId={post.id} />
-                <Button variant="ghost" size="icon" onClick={handleShare} className="relative overflow-hidden" title="Compartir">
+                <Button variant="ghost" size="icon" onClick={handleShare} className="relative overflow-hidden" title={L("Compartir", "Share")}>
                   {copied ? (
                     <Check className="h-4 w-4 text-signal animate-in zoom-in duration-300" />
                   ) : (

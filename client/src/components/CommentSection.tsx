@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
 import { UserCircle2, Trash2 } from "lucide-react"; // Importamos un icono de basura
 import { toast } from "@/hooks/use-toast";
+import { useLang } from "@/lib/lang";
 
 interface CommentData {
   id: string;
@@ -17,7 +18,8 @@ interface CommentData {
 
 export default function CommentSection({ postId }: { postId: string }) {
   // 1. (ACTUALIZADO) ¡Obtenemos 'isAdmin' de nuestro cerebro global!
-  const { user, isAuthenticated, isAdmin } = useAuth(); 
+  const { user, isAuthenticated, isAdmin } = useAuth();
+  const { L, locale } = useLang(); 
   const [comments, setComments] = useState<CommentData[]>([]);
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,7 +64,7 @@ export default function CommentSection({ postId }: { postId: string }) {
       }
     } catch (error) {
       console.error("Error enviando comentario:", error);
-      toast({ title: "No se pudo enviar el comentario", variant: "destructive" });
+      toast({ title: L("No se pudo enviar el comentario", "Couldn't post the comment"), variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -71,7 +73,7 @@ export default function CommentSection({ postId }: { postId: string }) {
   // 2. ¡NUEVA FUNCIÓN! Manejador para BORRAR un comentario
   const handleDelete = async (commentId: string) => {
     // Pedimos confirmación para no borrar accidentalmente
-    if (!window.confirm("¿Estás seguro de que quieres borrar este comentario?")) {
+    if (!window.confirm(L("¿Estás seguro de que quieres borrar este comentario?", "Are you sure you want to delete this comment?"))) {
       return;
     }
 
@@ -91,17 +93,17 @@ export default function CommentSection({ postId }: { postId: string }) {
       } else {
         // El backend nos dijo que no (ej. 403, 404)
         const data = await res.json();
-        toast({ title: "Error al borrar", description: data.message, variant: "destructive" });
+        toast({ title: L("Error al borrar", "Delete failed"), description: data.message, variant: "destructive" });
       }
     } catch (error) {
       console.error("Error de red al borrar:", error);
-      toast({ title: "No se pudo borrar el comentario", variant: "destructive" });
+      toast({ title: L("No se pudo borrar el comentario", "Couldn't delete the comment"), variant: "destructive" });
     }
   };
 
   return (
     <div className="mt-12 border-t pt-8">
-      <h3 className="text-2xl font-bold mb-6">Comentarios ({comments.length})</h3>
+      <h3 className="text-2xl font-bold mb-6">{L("Comentarios", "Comments")} ({comments.length})</h3>
 
       {/* Formulario de Comentario (sin cambios) */}
       {isAuthenticated ? (
@@ -109,26 +111,26 @@ export default function CommentSection({ postId }: { postId: string }) {
           {/* ... (tu formulario de 'Escribe tu opinión...') ... */}
           {/* 1. Añadimos un 'htmlFor' que coincida con el 'id' */}
           <label htmlFor="comment-textarea" className="block mb-2 text-sm font-medium">
-            Comentar como <span className="text-primary">{user?.email}</span>
+            {L("Comentar como", "Commenting as")} <span className="text-primary">{user?.email}</span>
           </label>
           <Textarea
             id="comment-textarea" // <-- 2. Añadimos el ID
             name="comment"        // <-- 3. Añadimos el 'name' (esto arregla la otra advertencia)
-            placeholder="Escribe tu opinión..."
+            placeholder={L("Escribe tu opinión...", "Share your thoughts...")}
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             className="mb-3 bg-background"
             rows={3}
           />
           <Button type="submit" disabled={isSubmitting || !newComment.trim()}>
-            {isSubmitting ? "Publicando..." : "Publicar Comentario"}
+            {isSubmitting ? L("Publicando...", "Posting...") : L("Publicar comentario", "Post comment")}
           </Button>
         </form>
       ) : (
         <div className="mb-8 p-6 bg-muted/50 rounded-lg text-center">
-          <p className="mb-3 text-muted-foreground">Inicia sesión para unirte a la conversación.</p>
+          <p className="mb-3 text-muted-foreground">{L("Inicia sesión para unirte a la conversación.", "Sign in to join the conversation.")}</p>
           <Link href="/login">
-            <Button variant="outline">Iniciar Sesión</Button>
+            <Button variant="outline">{L("Iniciar sesión", "Sign in")}</Button>
           </Link>
         </div>
       )}
@@ -136,7 +138,7 @@ export default function CommentSection({ postId }: { postId: string }) {
       {/* 3. (ACTUALIZADO) Lista de Comentarios */}
       <div className="space-y-6">
         {comments.length === 0 ? (
-          <p className="text-muted-foreground italic">Sé el primero en comentar.</p>
+          <p className="text-muted-foreground italic">{L("Sé el primero en comentar.", "Be the first to comment.")}</p>
         ) : (
           comments.map((comment) => (
             <div key={comment.id} className="flex gap-4">
@@ -149,7 +151,7 @@ export default function CommentSection({ postId }: { postId: string }) {
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-semibold text-sm">{comment.author}</span>
                   <span className="text-xs text-muted-foreground">
-                    {new Date(comment.createdAt).toLocaleDateString()}
+                    {new Date(comment.createdAt).toLocaleDateString(locale)}
                   </span>
                   
                   {/* 4. ¡EL BOTÓN DE ADMIN! */}

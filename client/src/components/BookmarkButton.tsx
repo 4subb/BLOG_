@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
+import { useLang } from "@/lib/lang";
 
 export default function BookmarkButton({ postId }: { postId: string }) {
   const { isAuthenticated } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
+  const { L } = useLang();
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -19,7 +21,7 @@ export default function BookmarkButton({ postId }: { postId: string }) {
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    if (!isAuthenticated) { toast({ title: "Inicia sesión para guardar posts" }); return; }
+    if (!isAuthenticated) { toast({ title: L("Inicia sesión para guardar posts", "Sign in to save posts") }); return; }
 
     setIsSaved(!isSaved); // Optimistic update
     try {

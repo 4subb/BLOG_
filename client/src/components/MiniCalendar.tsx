@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
-import { es } from 'date-fns/locale'; 
+import { es, enUS } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Circle, Calendar as CalendarIcon } from 'lucide-react'; // Importamos icono
 import { Button } from "@/components/ui/button";
+import { useLang } from "@/lib/lang";
 
 type SportEvent = {
   id: string;
@@ -31,12 +32,14 @@ export default function MiniCalendar({
   selectedDate, 
   onSelectDate 
 }: MiniCalendarProps) {
+  const { L, es: isSpanish } = useLang();
+  const dfLocale = isSpanish ? es : enUS;
 
   // Generar los días
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
-  const startDate = startOfWeek(monthStart, { locale: es });
-  const endDate = endOfWeek(monthEnd, { locale: es });
+  const startDate = startOfWeek(monthStart, { locale: dfLocale });
+  const endDate = endOfWeek(monthEnd, { locale: dfLocale });
   const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
 
   // Filtrar eventos del día seleccionado
@@ -61,7 +64,7 @@ export default function MiniCalendar({
       <div className="p-4 flex items-center justify-between bg-muted/30 border-b">
         <div className="flex items-center gap-2">
            <span className="font-heading font-bold capitalize text-sm">
-            {format(currentDate, 'MMMM yyyy', { locale: es })}
+            {format(currentDate, 'MMMM yyyy', { locale: dfLocale })}
           </span>
           {/* 3. BOTÓN HOY */}
           <Button 
@@ -69,7 +72,7 @@ export default function MiniCalendar({
             size="sm" 
             className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
             onClick={goToToday}
-            title="Ir a hoy"
+            title={L("Ir a hoy", "Go to today")}
           >
             Hoy
           </Button>
@@ -87,7 +90,7 @@ export default function MiniCalendar({
 
       {/* Días Semana */}
       <div className="grid grid-cols-7 text-center text-xs font-medium text-muted-foreground p-2 bg-muted/10">
-        {['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'].map(day => (
+        {(isSpanish ? ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'] : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']).map(day => (
           <div key={day} className="py-1">{day}</div>
         ))}
       </div>
@@ -125,7 +128,7 @@ export default function MiniCalendar({
       {/* Lista de eventos */}
       <div className="p-4 border-t bg-muted/10 min-h-[100px]">
         <p className="text-xs font-semibold text-muted-foreground mb-2 capitalize">
-          Eventos del {selectedDate ? format(selectedDate, 'd MMMM', { locale: es }) : 'Día'}
+          {L('Eventos del', 'Events on')} {selectedDate ? format(selectedDate, isSpanish ? 'd MMMM' : 'MMMM d', { locale: dfLocale }) : L('día', 'day')}
         </p>
         
         {selectedEvents.length > 0 ? (
@@ -141,7 +144,7 @@ export default function MiniCalendar({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground italic">No hay eventos programados.</p>
+          <p className="text-xs text-muted-foreground italic">{L("No hay eventos programados.", "No events scheduled.")}</p>
         )}
       </div>
     </div>

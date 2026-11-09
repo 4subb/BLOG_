@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dumbbell, Plus, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext"; 
+import { useLang } from "@/lib/lang";
 
 // Solo necesitamos el tipo de dato, nada de base de datos
 type GymLog = { id: string; date: string; exercise: string; weight: number; sets: number; reps: number; };
@@ -63,6 +64,7 @@ const BarbellVisualizer = ({ weight }: { weight: number }) => {
 
 export default function GymTracker() {
   const { user } = useAuth();
+  const { L, locale } = useLang();
   const [logs, setLogs] = useState<GymLog[]>([]);
   const [exercise, setExercise] = useState("");
   const [weight, setWeight] = useState("");
@@ -96,10 +98,10 @@ export default function GymTracker() {
   if (!user) return (
     <div className="flex flex-col items-start justify-between gap-6 border border-dashed border-rock/70 p-8 sm:flex-row sm:items-center">
       <div>
-        <p className="label-mono flex items-center gap-2 text-signal"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-signal" /> Acceso restringido</p>
-        <p className="mt-3 max-w-md text-muted-foreground">Inicia sesión para registrar tus entrenamientos y ver tu progreso.</p>
+        <p className="label-mono flex items-center gap-2 text-signal"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-signal" /> {L("Acceso restringido", "Restricted access")}</p>
+        <p className="mt-3 max-w-md text-muted-foreground">{L("Inicia sesión para registrar tus entrenamientos y ver tu progreso.", "Sign in to log your workouts and track your progress.")}</p>
       </div>
-      <a href="/login" className="label-mono inline-flex h-10 items-center rounded-full border border-foreground px-5 transition-colors hover:bg-foreground hover:text-background">Acceso →</a>
+      <a href="/login" className="label-mono inline-flex h-10 items-center rounded-full border border-foreground px-5 transition-colors hover:bg-foreground hover:text-background">{L("Acceso →", "Sign in →")}</a>
     </div>
   );
 
@@ -107,11 +109,11 @@ export default function GymTracker() {
     <Card className="mt-8 font-mono">
       <CardHeader className="flex flex-row justify-between items-center border-b pb-4 mb-6">
         <CardTitle className="text-2xl font-black uppercase flex items-center gap-2">
-          <Dumbbell className="h-6 w-6 text-primary" /> Hipertrofia & Metadatos
+          <Dumbbell className="h-6 w-6 text-primary" /> {L("Hipertrofia & Metadatos", "Hypertrophy & Metadata")}
         </CardTitle>
         <div className="text-right">
-          <div className="text-xs text-muted-foreground uppercase">Tonelaje Total</div>
-          <div className="text-xl font-black text-primary">{totalTonnage.toLocaleString()} KG</div>
+          <div className="text-xs text-muted-foreground uppercase">{L("Tonelaje total", "Total tonnage")}</div>
+          <div className="text-xl font-black text-primary">{totalTonnage.toLocaleString(locale)} KG</div>
         </div>
       </CardHeader>
 
@@ -132,22 +134,22 @@ export default function GymTracker() {
             </div>
           </div>
           <div className="mt-4 text-xs font-bold uppercase text-center text-muted-foreground">
-            Densidad Muscular: <span className="text-foreground">{muscleDensityOpacity}%</span> <br/>
-            Género Base: <span className="text-foreground">{user.gender === 'female' ? 'Femenino' : 'Masculino'}</span>
+            {L("Densidad muscular", "Muscle density")}: <span className="text-foreground">{muscleDensityOpacity}%</span> <br/>
+            {L("Género base", "Base gender")}: <span className="text-foreground">{user.gender === 'female' ? L('Femenino', 'Female') : L('Masculino', 'Male')}</span>
           </div>
         </div>
 
         {/* PANEL DERECHO: FORMULARIO Y BARRA */}
         <div className="col-span-1 md:col-span-2 space-y-6">
           <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
-            <div className="col-span-2"><Label>Ejercicio</Label><Input required placeholder="Press Banca, Sentadilla..." value={exercise} onChange={e => setExercise(e.target.value)} /></div>
-            <div><Label>Peso (kg)</Label><Input type="number" required value={weight} onChange={e => setWeight(e.target.value)} /></div>
+            <div className="col-span-2"><Label>{L("Ejercicio", "Exercise")}</Label><Input required placeholder={L("Press banca, sentadilla...", "Bench press, squat...")} value={exercise} onChange={e => setExercise(e.target.value)} /></div>
+            <div><Label>{L("Peso (kg)", "Weight (kg)")}</Label><Input type="number" required value={weight} onChange={e => setWeight(e.target.value)} /></div>
             <div className="col-span-2 md:col-span-1"><Button type="submit" className="w-full font-bold"><Plus className="h-4 w-4 mr-1"/> Log</Button></div>
           </form>
 
           {parseInt(weight) >= 20 && (
             <div className="border border-border p-2 bg-muted/30 rounded-md">
-              <div className="text-xs text-center uppercase font-bold text-muted-foreground mb-2">Carga en Barra</div>
+              <div className="text-xs text-center uppercase font-bold text-muted-foreground mb-2">{L("Carga en barra", "Bar load")}</div>
               <BarbellVisualizer weight={parseInt(weight)} />
             </div>
           )}

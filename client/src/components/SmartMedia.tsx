@@ -1,4 +1,5 @@
 import React from "react";
+import { useLang } from "@/lib/lang";
 
 interface SmartMediaProps {
   src: string | null | undefined;
@@ -9,11 +10,12 @@ interface SmartMediaProps {
 
 export const SmartMedia: React.FC<SmartMediaProps> = ({ 
   src, 
-  alt = "Contenido multimedia", 
+  alt, 
   className = "w-full h-auto rounded-lg shadow-md",
   loading = "lazy",
 }) => {
-  if (!src) return <div className="bg-muted animate-pulse rounded-lg w-full h-48 flex items-center justify-center text-muted-foreground">Sin multimedia</div>;
+  const { L } = useLang();
+  if (!src) return <div className="bg-muted animate-pulse rounded-lg w-full h-48 flex items-center justify-center text-muted-foreground">{L("Sin multimedia", "No media")}</div>;
 
   const baseUrl = import.meta.env.VITE_CDN_URL || "";
   // URLs absolutas, data: y las que sirve este mismo servidor (/api/media/...) van tal cual;
@@ -26,7 +28,7 @@ export const SmartMedia: React.FC<SmartMediaProps> = ({
   if (isVideo) {
     return (
       <video src={finalSrc} controls preload="metadata" playsInline className={className}>
-        Tu navegador no soporta la reproducción de video.
+        {L("Tu navegador no soporta la reproducción de video.", "Your browser does not support video playback.")}
       </video>
     );
   }
@@ -34,7 +36,7 @@ export const SmartMedia: React.FC<SmartMediaProps> = ({
   return (
     <img 
       src={finalSrc} 
-      alt={alt} 
+      alt={alt ?? ""} 
       loading={loading}
       className={className} 
       onError={(e) => {

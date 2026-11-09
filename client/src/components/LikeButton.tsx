@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion"; // ¡Para la animación!
 import { toast } from "@/hooks/use-toast";
+import { useLang } from "@/lib/lang";
 
 interface LikeButtonProps {
   postId: string;
@@ -17,6 +18,7 @@ export default function LikeButton({ postId }: LikeButtonProps) {
   
   const [likesCount, setLikesCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const { L } = useLang();
   const [isLoading, setIsLoading] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -49,7 +51,7 @@ export default function LikeButton({ postId }: LikeButtonProps) {
     e.preventDefault(); // Evita que el Link navegue
     e.stopPropagation(); // Evita que el clic suba a la tarjeta
     if (!isAuthenticated) {
-      toast({ title: "Inicia sesión para dar Me gusta" });
+      toast({ title: L("Inicia sesión para dar Me gusta", "Sign in to like posts") });
       return;
     }
 

@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import React, { useState } from 'react';
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useLang } from "@/lib/lang";
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   
   const { login, isLoading } = useAuth();
+  const { L } = useLang();
 
   const handleSubmit = async (evento: React.FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
@@ -18,7 +20,7 @@ function LoginPage() {
       await login({ email, password });
       // Si el login funciona, el AuthContext te redirige solo.
     } catch (error: any) {
-      toast({ title: "No se pudo iniciar sesión", description: error.message || "Credenciales incorrectas", variant: "destructive" });
+      toast({ title: L("No se pudo iniciar sesión", "Couldn't sign in"), description: error.message || L("Credenciales incorrectas", "Invalid credentials"), variant: "destructive" });
     }
   };
 
@@ -26,8 +28,8 @@ function LoginPage() {
     <AuthShell>
         
         <div>
-          <h2 className="font-display text-4xl text-foreground">Iniciar Sesión</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Bienvenido de nuevo</p>
+          <h2 className="font-display text-4xl text-foreground">{L("Iniciar sesión", "Sign in")}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{L("Bienvenido de nuevo", "Welcome back")}</p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -48,7 +50,7 @@ function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground/90">Contraseña</label>
+              <label className="block text-sm font-medium text-foreground/90">{L("Contraseña", "Password")}</label>
               <div className="relative mt-1">
                 <input 
                   type={showPassword ? "text" : "password"} 
@@ -74,17 +76,17 @@ function LoginPage() {
             disabled={isLoading}
             className="w-full h-10 px-4 border border-transparent rounded-full text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-[background-color,transform] duration-200 active:scale-[0.98] disabled:opacity-60"
           >
-            {isLoading ? "Entrando..." : "Entrar"}
+            {isLoading ? L("Entrando...", "Signing in...") : L("Entrar", "Sign in")}
           </button>
         </form>
 
         {/* 👇 AQUÍ ESTÁ EL ENLACE AL REGISTRO 👇 */}
         <div className="text-center mt-4">
           <p className="text-sm text-muted-foreground">
-            ¿No tienes cuenta?{' '}
+            {L("¿No tienes cuenta?", "Don't have an account?")}{' '}
             <Link href="/register">
               <span className="font-medium text-foreground underline-offset-4 hover:underline cursor-pointer">
-                Regístrate aquí
+                {L("Regístrate aquí", "Sign up here")}
               </span>
             </Link>
           </p>

@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useMotionValue, useReducedMotion, useScroll, u
 import { easeOutExpo } from "@/lib/motion";
 import { Brackets } from "./primitives";
 import { cn } from "@/lib/utils";
+import { useLang } from "@/lib/lang";
 
 /* Capas de fondo que se montan en <MissionHero signature={...}>. Todas son pointer-events-none:
    escuchan el cursor en window para no bloquear los clics del contenido. */
@@ -94,6 +95,7 @@ export function PulseSignature() {
 const ROUTE = "M60 330 C 260 60, 640 20, 940 170";
 export function FlightSignature() {
   const reduce = useReducedMotion();
+  const { L } = useLang();
   return (
     <div className="pointer-events-none absolute inset-0">
       <svg className="absolute inset-x-0 top-[12%] hidden h-[62%] w-full sm:block" viewBox="0 0 1000 400" preserveAspectRatio="xMidYMid meet" fill="none">
@@ -101,7 +103,7 @@ export function FlightSignature() {
         <motion.circle cx="60" cy="330" r="5" fill="hsl(var(--foreground))" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3 }} />
         <motion.circle cx="940" cy="170" r="5" fill="none" stroke="hsl(var(--foreground))" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 2.2 }} />
         <text x="76" y="352" className="fill-current font-mono text-[11px] text-muted-foreground">SLP · 22.15°N 100.98°W</text>
-        <text x="924" y="200" textAnchor="end" className="fill-current font-mono text-[11px] text-muted-foreground">PRÓXIMO DESTINO · ??</text>
+        <text x="924" y="200" textAnchor="end" className="fill-current font-mono text-[11px] text-muted-foreground">{L("PRÓXIMO DESTINO", "NEXT DESTINATION")} · ??</text>
         {!reduce && (
           <g>
             <circle r="6" fill="hsl(var(--signal))">

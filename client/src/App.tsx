@@ -15,6 +15,7 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const AcademicProfile = lazy(() => import("@/pages/AcademicProfile"));
 const Engineering = lazy(() => import("@/pages/Engineering"));
 const Sports = lazy(() => import("@/pages/Sports"));
+const Gym = lazy(() => import("@/pages/Gym"));
 const Travel = lazy(() => import("@/pages/Travel"));
 const Reading = lazy(() => import("@/pages/Reading"));
 const Gallery = lazy(() => import("@/pages/Gallery"));
@@ -33,6 +34,7 @@ function Router({ location }: { location: string }) {
       <Route path="/academico" component={AcademicProfile} />
       <Route path="/ingenieria" component={Engineering} />
       <Route path="/deportes" component={Sports} />
+      <Route path="/gym" component={Gym} />
       <Route path="/viajes" component={Travel} />
       <Route path="/lectura" component={Reading} />
       <Route path="/galeria" component={Gallery} />

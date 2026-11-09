@@ -10,9 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type PostSummary } from "@shared/schema";
 import { Camera, KeyRound, Upload } from "lucide-react"; // Iconos nuevos
 import { toast } from "@/hooks/use-toast";
+import { useLang } from "@/lib/lang";
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { L } = useLang();
   const [, setLocation] = useLocation();
 
   const [username, setUsername] = useState("");
@@ -58,11 +60,11 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Selecciona un archivo de imagen", variant: "destructive" });
+      toast({ title: L("Selecciona un archivo de imagen", "Choose an image file"), variant: "destructive" });
       return;
     }
     if (file.size > 15 * 1024 * 1024) {
-      toast({ title: "La imagen es muy pesada", description: "Máximo 15 MB.", variant: "destructive" });
+      toast({ title: L("La imagen es muy pesada", "The image is too large"), description: L("Máximo 15 MB.", "15 MB max."), variant: "destructive" });
       return;
     }
 
@@ -80,7 +82,7 @@ export default function ProfilePage() {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      toast({ title: "No se pudo leer la imagen", variant: "destructive" });
+      toast({ title: L("No se pudo leer la imagen", "Couldn't read the image"), variant: "destructive" });
     };
     img.src = url;
   };
@@ -95,10 +97,10 @@ export default function ProfilePage() {
         body: JSON.stringify({ username, avatarUrl }),
       });
       if (res.ok) {
-        toast({ title: "Perfil actualizado" });
+        toast({ title: L("Perfil actualizado", "Profile updated") });
         window.location.reload(); 
       } else {
-        toast({ title: "No se pudo guardar el perfil", variant: "destructive" });
+        toast({ title: L("No se pudo guardar el perfil", "Couldn't save the profile"), variant: "destructive" });
       }
     } catch (error) {
       console.error(error);
@@ -110,11 +112,11 @@ export default function ProfilePage() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 8) {
-      toast({ title: "La nueva contraseña debe tener al menos 8 caracteres", variant: "destructive" });
+      toast({ title: L("La nueva contraseña debe tener al menos 8 caracteres", "The new password must be at least 8 characters"), variant: "destructive" });
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ title: "Las contraseñas no coinciden", variant: "destructive" });
+      toast({ title: L("Las contraseñas no coinciden", "Passwords don't match"), variant: "destructive" });
       return;
     }
     setIsChangingPassword(true);
@@ -126,13 +128,13 @@ export default function ProfilePage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        toast({ title: "Contraseña actualizada" });
+        toast({ title: L("Contraseña actualizada", "Password updated") });
         setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
       } else {
-        toast({ title: data.message || "No se pudo cambiar la contraseña", variant: "destructive" });
+        toast({ title: data.message || L("No se pudo cambiar la contraseña", "Couldn't change the password"), variant: "destructive" });
       }
     } catch {
-      toast({ title: "Error de conexión", variant: "destructive" });
+      toast({ title: L("Error de conexión", "Connection error"), variant: "destructive" });
     } finally {
       setIsChangingPassword(false);
     }
@@ -143,14 +145,14 @@ export default function ProfilePage() {
   return (
     <div className="flex-1">
       <main className="page-container pb-24 pt-8 sm:pt-10">
-        <PageIntro index="U1" label="Perfil" title={user.username || user.email.split("@")[0]} />
+        <PageIntro index="U1" label={L("Perfil", "Profile")} title={user.username || user.email.split("@")[0]} />
         <div className="flex flex-col md:flex-row gap-8">
           
           {/* COLUMNA IZQUIERDA: Tarjeta de Identidad */}
           <div className="w-full md:w-1/3">
             <Card>
               <CardHeader>
-                <CardTitle>Mi Perfil</CardTitle>
+                <CardTitle>{L("Mi perfil", "My profile")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 
@@ -191,13 +193,13 @@ export default function ProfilePage() {
                 
                 <form onSubmit={handleUpdateProfile} className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Username</Label>
+                    <Label>{L("Nombre de usuario", "Username")}</Label>
                     <Input 
                       value={username} 
                       onChange={(e) => setUsername(e.target.value)} 
-                      placeholder="Ej. JuanDev"
+                      placeholder={L("Ej. JuanDev", "e.g. JohnDev")}
                     />
-                    <p className="text-xs text-muted-foreground">Este nombre será público.</p>
+                    <p className="text-xs text-muted-foreground">{L("Este nombre será público.", "This name will be public.")}</p>
                   </div>
 
                   {/* El campo de URL manual lo ocultamos o dejamos como solo lectura si quieres */}
@@ -208,7 +210,7 @@ export default function ProfilePage() {
                   </div>
 
                   <Button type="submit" className="w-full" disabled={isSaving}>
-                    {isSaving ? "Guardando..." : "Actualizar Perfil"}
+                    {isSaving ? L("Guardando...", "Saving...") : L("Actualizar perfil", "Update profile")}
                   </Button>
                 </form>
               </CardContent>
@@ -216,28 +218,28 @@ export default function ProfilePage() {
 
             <Card className="mt-8">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5" /> Seguridad</CardTitle>
+                <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5" /> {L("Seguridad", "Security")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleChangePassword} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="current-password">Contraseña actual</Label>
+                    <Label htmlFor="current-password">{L("Contraseña actual", "Current password")}</Label>
                     <Input id="current-password" type="password" autoComplete="current-password" required
                       value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="new-password">Nueva contraseña</Label>
+                    <Label htmlFor="new-password">{L("Nueva contraseña", "New password")}</Label>
                     <Input id="new-password" type="password" autoComplete="new-password" required minLength={8}
                       value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                    <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
+                    <p className="text-xs text-muted-foreground">{L("Mínimo 8 caracteres.", "At least 8 characters.")}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirmar nueva contraseña</Label>
+                    <Label htmlFor="confirm-password">{L("Confirmar nueva contraseña", "Confirm new password")}</Label>
                     <Input id="confirm-password" type="password" autoComplete="new-password" required
                       value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                   </div>
                   <Button type="submit" variant="outline" className="w-full" disabled={isChangingPassword}>
-                    {isChangingPassword ? "Cambiando..." : "Cambiar contraseña"}
+                    {isChangingPassword ? L("Cambiando...", "Changing...") : L("Cambiar contraseña", "Change password")}
                   </Button>
                 </form>
               </CardContent>
@@ -248,13 +250,13 @@ export default function ProfilePage() {
           <div className="w-full md:w-2/3">
             <Tabs defaultValue="bookmarks">
               <TabsList>
-                <TabsTrigger value="bookmarks">Guardados ({bookmarks.length})</TabsTrigger>
-                <TabsTrigger value="activity">Actividad Reciente</TabsTrigger>
+                <TabsTrigger value="bookmarks">{L("Guardados", "Saved")} ({bookmarks.length})</TabsTrigger>
+                <TabsTrigger value="activity">{L("Actividad reciente", "Recent activity")}</TabsTrigger>
               </TabsList>
               
               <TabsContent value="bookmarks" className="mt-6">
                 {loadingBookmarks ? (
-                  <p>Cargando favoritos...</p>
+                  <p>{L("Cargando favoritos...", "Loading saved posts...")}</p>
                 ) : bookmarks.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {bookmarks.map(post => (
@@ -268,20 +270,20 @@ export default function ProfilePage() {
                            onClick={() => setLocation(`/post/${post.id}`)}
                            className="text-primary p-0 h-auto font-bold hover:bg-transparent self-start"
                          >
-                           Leer más
+                           {L("Leer más", "Read more")}
                          </Button>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-10 text-muted-foreground">
-                    No has guardado ningún post todavía.
+                    {L("No has guardado ningún post todavía.", "You haven't saved any posts yet.")}
                   </div>
                 )}
               </TabsContent>
               
               <TabsContent value="activity">
-                <p className="text-muted-foreground py-10">Historial de comentarios no disponible aún.</p>
+                <p className="text-muted-foreground py-10">{L("Historial de comentarios no disponible aún.", "Comment history isn't available yet.")}</p>
               </TabsContent>
             </Tabs>
           </div>

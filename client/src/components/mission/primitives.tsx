@@ -3,6 +3,7 @@ import { animate, motion, useInView, useReducedMotion, useScroll, useTransform }
 import { cn } from "@/lib/utils";
 import { easeOutExpo } from "@/lib/motion";
 import { canUsePreciseLocation, locationLabel, requestPreciseLocation, useVisitorLocation } from "@/lib/location";
+import { useLang } from "@/lib/lang";
 
 /* ───────────────────────── SplitReveal ─────────────────────────
    Cada palabra sube desde detrás de una máscara (overflow hidden). */
@@ -155,12 +156,13 @@ export function LiveClock({ className }: { className?: string }) {
   const [now, setNow] = useState(() => new Date());
   const [locating, setLocating] = useState(false);
   const geo = useVisitorLocation();
+  const { L, locale } = useLang();
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
   // Sin timeZone: la hora del dispositivo, que ya es la del lugar donde está el visitante
-  const time = now.toLocaleTimeString("es-MX", { hour12: false });
+  const time = now.toLocaleTimeString(locale, { hour12: false });
   const label = locationLabel(geo);
   const askPrecise = !geo?.precise && canUsePreciseLocation();
 
@@ -176,7 +178,7 @@ export function LiveClock({ className }: { className?: string }) {
         <button
           type="button"
           onClick={locate}
-          title="Usar mi ubicación exacta"
+          title={L("Usar mi ubicación exacta", "Use my exact location")}
           className="uppercase tracking-[inherit] underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           {label}

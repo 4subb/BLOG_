@@ -63,7 +63,7 @@ export function countryList(posts: ViewPost[]): { key: string; label: string; po
 export function toViewPost(post: PostSummary): ViewPost {
   return {
     ...post,
-    date: new Date(post.createdAt).toLocaleDateString(),
+    date: new Date(post.createdAt).toLocaleDateString(i18n.language),
     dotDate: dotDate(post.createdAt),
     imageUrl: post.imageUrl || undefined,
     country: post.country || undefined,

@@ -6,6 +6,7 @@ import {
   Shuffle, Repeat, Repeat1, Heart, ChevronDown, ChevronUp, X, LogOut, ExternalLink, Music2
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { tr, useLang } from "@/lib/lang";
 
 /* ─── Spotify SDK global type ─── */
 declare global {
@@ -88,6 +89,7 @@ export function SpotifyPlayer() {
 
   const [connected, setConnected] = useState(false);
   const [open, setOpen] = useState(false);
+  const { L } = useLang();
   // Minimizado = barra horizontal compacta; se recuerda entre visitas
   const [minimized, setMinimized] = useState(() => {
     try { return localStorage.getItem('spotify-minimized') === '1'; } catch { return false; }
@@ -189,18 +191,18 @@ export function SpotifyPlayer() {
     player.addListener('authentication_error', ({ message }: { message: string }) => {
       console.error('Spotify SDK auth error:', message);
       setSdkReady(false);
-      setError('Spotify pidió volver a iniciar sesión: desconecta y vuelve a conectar.');
+      setError(tr('Spotify pidió volver a iniciar sesión: desconecta y vuelve a conectar.', 'Spotify asked you to sign in again: disconnect and reconnect.'));
     });
 
     player.addListener('account_error', ({ message }: { message: string }) => {
       console.error('Spotify SDK account error (Premium required):', message);
       setSdkReady(false);
-      setError('Reproducir en el navegador requiere Spotify Premium. Puedes seguir controlando tu móvil o PC.');
+      setError(tr('Reproducir en el navegador requiere Spotify Premium. Puedes seguir controlando tu móvil o PC.', 'Playing in the browser requires Spotify Premium. You can still control your phone or PC.'));
     });
 
     player.addListener('playback_error', ({ message }: { message: string }) => {
       console.error('Spotify SDK playback error:', message);
-      setError('Spotify no pudo reproducir esta canción.');
+      setError(tr('Spotify no pudo reproducir esta canción.', 'Spotify couldn\'t play this track.'));
     });
 
     player.addListener('player_state_changed', (sdkState: any) => {
@@ -309,9 +311,9 @@ export function SpotifyPlayer() {
       if (!result?.ok) {
         setState(s => s ? { ...s, is_playing: false } : s);
         setError(
-          result?.reason === 'PREMIUM_REQUIRED' ? 'Spotify Premium es necesario para controlar la reproducción.'
-          : !sdkReady ? 'Abre Spotify en tu móvil o PC para poder reproducir.'
-          : 'No se pudo iniciar la reproducción. Inténtalo de nuevo.'
+          result?.reason === 'PREMIUM_REQUIRED' ? tr('Spotify Premium es necesario para controlar la reproducción.', 'Spotify Premium is required to control playback.')
+          : !sdkReady ? tr('Abre Spotify en tu móvil o PC para poder reproducir.', 'Open Spotify on your phone or PC to play.')
+          : tr('No se pudo iniciar la reproducción. Inténtalo de nuevo.', 'Couldn\'t start playback. Please try again.')
         );
       }
     }
@@ -411,7 +413,7 @@ export function SpotifyPlayer() {
             ? 'text-[#1DB954] hover:bg-[#1DB954]/10'
             : 'text-muted-foreground hover:text-foreground hover:bg-accent'
           }`}
-        title={connected ? 'Reproductor Spotify' : 'Conectar Spotify'}
+        title={connected ? L('Reproductor Spotify', 'Spotify player') : L('Conectar Spotify', 'Connect Spotify')}
       >
         <SpotifyIcon className="w-5 h-5" />
       </button>
@@ -454,7 +456,7 @@ export function SpotifyPlayer() {
 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold leading-tight text-white">
-                  {track?.name ?? (sdkReady ? 'Presiona play' : 'Spotify')}
+                  {track?.name ?? (sdkReady ? L('Presiona play', 'Press play') : 'Spotify')}
                 </p>
                 <p className="truncate text-xs text-white/60">
                   {error ?? track?.artists.map(a => a.name).join(', ') ?? ''}
@@ -462,27 +464,27 @@ export function SpotifyPlayer() {
               </div>
 
               <div className="flex shrink-0 items-center">
-                <button onClick={handlePrev} aria-label="Anterior" className="p-1.5 text-white/80 transition-colors hover:text-white">
+                <button onClick={handlePrev} aria-label={L("Anterior", "Previous")} className="p-1.5 text-white/80 transition-colors hover:text-white">
                   <SkipBack className="h-4 w-4 fill-current" />
                 </button>
                 <motion.button
                   whileTap={{ scale: 0.9 }}
                   onClick={handlePlayPause}
-                  aria-label={state?.is_playing ? 'Pausa' : 'Reproducir'}
+                  aria-label={state?.is_playing ? L('Pausa', 'Pause') : L('Reproducir', 'Play')}
                   className="mx-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-white"
                 >
                   {state?.is_playing
                     ? <Pause className="h-4 w-4 fill-black text-black" />
                     : <Play className="ml-0.5 h-4 w-4 fill-black text-black" />}
                 </motion.button>
-                <button onClick={handleNext} aria-label="Siguiente" className="p-1.5 text-white/80 transition-colors hover:text-white">
+                <button onClick={handleNext} aria-label={L("Siguiente", "Next")} className="p-1.5 text-white/80 transition-colors hover:text-white">
                   <SkipForward className="h-4 w-4 fill-current" />
                 </button>
                 <span className="mx-1 h-6 w-px bg-white/20" />
-                <button onClick={() => toggleMinimized(false)} aria-label="Expandir" title="Expandir" className="p-1.5 text-white/70 transition-colors hover:text-white">
+                <button onClick={() => toggleMinimized(false)} aria-label={L("Expandir", "Expand")} title={L("Expandir", "Expand")} className="p-1.5 text-white/70 transition-colors hover:text-white">
                   <ChevronUp className="h-4 w-4" />
                 </button>
-                <button onClick={() => setOpen(false)} aria-label="Cerrar" title="Cerrar" className="p-1.5 text-white/70 transition-colors hover:text-white">
+                <button onClick={() => setOpen(false)} aria-label={L("Cerrar", "Close")} title={L("Cerrar", "Close")} className="p-1.5 text-white/70 transition-colors hover:text-white">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -529,8 +531,8 @@ export function SpotifyPlayer() {
                 <motion.button
                   onClick={() => toggleMinimized(true)}
                   whileTap={{ scale: 0.85 }}
-                  aria-label="Minimizar"
-                  title="Minimizar"
+                  aria-label={L("Minimizar", "Minimize")}
+                  title={L("Minimizar", "Minimize")}
                   className="w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm
                              flex items-center justify-center text-white/80 hover:text-white transition-colors"
                 >
@@ -539,8 +541,8 @@ export function SpotifyPlayer() {
                 <motion.button
                   onClick={() => setOpen(false)}
                   whileTap={{ scale: 0.85 }}
-                  aria-label="Cerrar"
-                  title="Cerrar"
+                  aria-label={L("Cerrar", "Close")}
+                  title={L("Cerrar", "Close")}
                   className="w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm
                              flex items-center justify-center text-white/80 hover:text-white transition-colors"
                 >
@@ -552,7 +554,7 @@ export function SpotifyPlayer() {
               <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
                 <SpotifyIcon className="w-3 h-3 text-[#1DB954]" />
                 <span className="text-[10px] text-white/80 font-semibold tracking-wide">
-                  {sdkActive ? 'En este navegador' : 'Spotify'}
+                  {sdkActive ? L('En este navegador', 'In this browser') : 'Spotify'}
                 </span>
               </div>
 
@@ -570,7 +572,7 @@ export function SpotifyPlayer() {
                   </>
                 ) : (
                   <p className="text-xs text-white/50 italic">
-                    {sdkReady ? 'Presiona play para empezar' : 'Conectando reproductor…'}
+                    {sdkReady ? L('Presiona play para empezar', 'Press play to start') : L('Conectando reproductor…', 'Connecting player…')}
                   </p>
                 )}
               </div>
@@ -671,24 +673,24 @@ export function SpotifyPlayer() {
                       const result = await api('/player/save', next ? 'PUT' : 'DELETE', { id: track.id });
                       if (!result?.ok) {
                         setLiked(!next); // Spotify no lo guardó: no mentir en el botón
-                        setError('No se pudo actualizar "Tus me gusta". Desconecta y vuelve a conectar Spotify para renovar los permisos.');
+                        setError(L('No se pudo actualizar "Tus me gusta". Desconecta y vuelve a conectar Spotify para renovar los permisos.', 'Couldn\'t update "Liked Songs". Disconnect and reconnect Spotify to renew permissions.'));
                       }
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
                       ${liked ? 'bg-[#1DB954]/10 border-[#1DB954] text-[#1DB954]' : 'border-border text-muted-foreground hover:text-foreground'}`}
                   >
                     <Heart className={`w-3.5 h-3.5 ${liked ? 'fill-current' : ''}`} />
-                    {liked ? 'Guardada' : 'Guardar'}
+                    {liked ? L('Guardada', 'Saved') : L('Guardar', 'Save')}
                   </button>
                   <a href={track.external_urls.spotify} target="_blank" rel="noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-border text-muted-foreground hover:text-foreground transition-colors">
-                    <ExternalLink className="w-3.5 h-3.5" /> Abrir
+                    <ExternalLink className="w-3.5 h-3.5" /> {L("Abrir", "Open")}
                   </a>
                 </>
               )}
               <button
                 onClick={async () => {
-                  if (!window.confirm('¿Desconectar tu cuenta de Spotify? Tendrás que volver a vincularla.')) return;
+                  if (!window.confirm(L('¿Desconectar tu cuenta de Spotify? Tendrás que volver a vincularla.', 'Disconnect your Spotify account? You\'ll need to link it again.'))) return;
                   sdkPlayerRef.current?.disconnect();
                   await api('/logout', 'POST');
                   sdkInitRef.current = false;
@@ -696,7 +698,7 @@ export function SpotifyPlayer() {
                 }}
                 className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
               >
-                <LogOut className="w-3.5 h-3.5" /> Desconectar
+                <LogOut className="w-3.5 h-3.5" /> {L("Desconectar", "Disconnect")}
               </button>
             </div>
           </motion.div>

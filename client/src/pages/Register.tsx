@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import React, { useState } from 'react';
 import { Eye, EyeOff, AlertCircle } from "lucide-react"; // Icono de alerta
 import { cn } from "@/lib/utils"; // Utilidad de Tailwind para mezclar clases
+import { useLang } from "@/lib/lang";
 
 function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -23,6 +24,7 @@ function RegisterPage() {
   }>({});
 
   const { register, isLoading } = useAuth();
+  const { L } = useLang();
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -35,15 +37,15 @@ function RegisterPage() {
 
     // 1. Validaciones Locales
     if (!isValidEmail(email)) {
-      newErrors.email = "El formato del correo no es válido.";
+      newErrors.email = L("El formato del correo no es válido.", "Invalid email format.");
       hasError = true;
     }
     if (password.length < 6) {
-      newErrors.password = "Mínimo 6 caracteres.";
+      newErrors.password = L("Mínimo 6 caracteres.", "At least 6 characters.");
       hasError = true;
     }
     if (password !== confirmPassword) {
-      newErrors.confirm = "Las contraseñas no coinciden.";
+      newErrors.confirm = L("Las contraseñas no coinciden.", "Passwords don't match.");
       hasError = true;
     }
 
@@ -64,7 +66,7 @@ function RegisterPage() {
           email: "duplicate" // Marca especial para mostrar el link de login
         });
       } else {
-        setErrors({ general: "Error al registrar: " + msg });
+        setErrors({ general: L("Error al registrar: ", "Sign-up error: ") + msg });
       }
     }
   };
@@ -73,8 +75,8 @@ function RegisterPage() {
     <AuthShell>
         
         <div>
-          <h2 className="font-display text-4xl text-foreground">Crear Cuenta</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Únete a nuestra comunidad</p>
+          <h2 className="font-display text-4xl text-foreground">{L("Crear cuenta", "Create account")}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{L("Únete a nuestra comunidad", "Join our community")}</p>
         </div>
 
         {/* Error General (si falla el servidor por otra cosa) */}
@@ -89,12 +91,12 @@ function RegisterPage() {
             
             {/* USUARIO */}
             <div>
-              <label className="block text-sm font-medium text-foreground/90">Nombre de Usuario</label>
+              <label className="block text-sm font-medium text-foreground/90">{L("Nombre de usuario", "Username")}</label>
               <input 
                 type="text" 
                 required 
                 className="mt-1 block w-full h-10 px-3 bg-background text-sm border border-input rounded-md outline-none transition-[border-color,box-shadow] focus:border-foreground/40 focus:ring-4 focus:ring-ring/15"
-                placeholder="Ej. JuanDev"
+                placeholder={L("Ej. JuanDev", "e.g. JohnDev")}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -115,7 +117,7 @@ function RegisterPage() {
                   "mt-1 block w-full h-10 px-3 bg-background text-sm border rounded-md outline-none transition-[border-color,box-shadow] focus:border-foreground/40 focus:ring-4 focus:ring-ring/15 transition-colors",
                   errors.email ? "border-destructive bg-destructive/5" : "border-input"
                 )}
-                placeholder="tu@email.com"
+                placeholder={L("tu@email.com", "you@email.com")}
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -127,9 +129,9 @@ function RegisterPage() {
               {errors.email === "duplicate" ? (
                 <p className="mt-2 text-sm text-destructive flex items-center gap-1 animate-in slide-in-from-left-2">
                    <AlertCircle className="w-4 h-4" />
-                   Este correo ya existe. 
+                   {L("Este correo ya existe.", "This email is already registered.")}
                    <Link href="/login" className="font-bold underline ml-1 hover:opacity-80">
-                     ¿Deseas iniciar sesión?
+                     {L("¿Deseas iniciar sesión?", "Sign in instead?")}
                    </Link>
                 </p>
               ) : errors.email && (
@@ -139,7 +141,7 @@ function RegisterPage() {
 
             {/* CONTRASEÑA */}
             <div>
-              <label className="block text-sm font-medium text-foreground/90">Contraseña</label>
+              <label className="block text-sm font-medium text-foreground/90">{L("Contraseña", "Password")}</label>
               <div className="relative mt-1">
                 <input 
                   type={showPassword ? "text" : "password"} 
@@ -163,7 +165,7 @@ function RegisterPage() {
 
             {/* CONFIRMAR */}
             <div>
-              <label className="block text-sm font-medium text-foreground/90">Confirmar Contraseña</label>
+              <label className="block text-sm font-medium text-foreground/90">{L("Confirmar contraseña", "Confirm password")}</label>
               <div className="relative mt-1">
                 <input 
                   type={showConfirm ? "text" : "password"} 
@@ -192,13 +194,13 @@ function RegisterPage() {
             disabled={isLoading}
             className="w-full h-10 px-4 border border-transparent rounded-full text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-[background-color,transform] duration-200 active:scale-[0.98] disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
           >
-            {isLoading ? "Creando cuenta..." : "Registrarse"}
+            {isLoading ? L("Creando cuenta...", "Creating account...") : L("Registrarse", "Sign up")}
           </button>
         </form>
 
         <div className="text-center text-sm">
           <p className="text-muted-foreground">
-            ¿Ya tienes cuenta? <Link href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">Inicia Sesión aquí</Link>
+            {L("¿Ya tienes cuenta?", "Already have an account?")} <Link href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">{L("Inicia sesión aquí", "Sign in here")}</Link>
           </p>
         </div>
 

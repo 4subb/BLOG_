@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import bcrypt from 'bcrypt';        
 import { z } from 'zod';            
 import spotifyRouter from './spotify';
+import f1Router from './f1';
+import newsRouter from './news';
 import { catchAsyncErrors } from './asyncErrors';
 import { extractInlineImages, extractImageUrl, toPostSummary } from './postContent';
 import { lookupIp } from './geo';
@@ -135,6 +137,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // --- Spotify Integration ---
   app.use('/api/spotify', spotifyRouter);
+
+  // --- F1 en vivo (Jolpica) ---
+  app.use('/api/f1', f1Router);
+  app.use('/api/sports/news', newsRouter);
 
   // --- Admin Blog ---
   app.get('/api/posts/admin', isAdmin, async (req, res) => { res.json((await storage.getPostsAdmin()).map((p) => toPostSummary(p))); });

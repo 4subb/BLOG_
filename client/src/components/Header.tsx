@@ -19,9 +19,11 @@ import { SpotifyPlayer } from "@/components/SpotifyPlayer";
 import { cn } from "@/lib/utils";
 import { easeOutExpo, springSoft } from "@/lib/motion";
 import { useScramble } from "@/components/mission/primitives";
+import { useLang } from "@/lib/lang";
 
 export default function Header() {
   const { t } = useTranslation();
+  const { L } = useLang();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -43,6 +45,7 @@ export default function Header() {
     { path: "/viajes", label: t("nav.travel") },
     { path: "/lectura", label: t("nav.reading") },
     { path: "/galeria", label: t("nav.gallery") },
+    { path: "/gym", label: t("nav.gym") },
   ];
 
   const isActive = (path: string) => (path === "/" ? location === "/" : location.startsWith(path));
@@ -65,17 +68,25 @@ export default function Header() {
       )}
     >
       <div className="page-container">
-        <div className="flex h-16 items-center gap-8">
+        <div className="flex h-16 items-center gap-4 xl:gap-8">
           {/* Marca */}
           <Link href="/" className="group flex shrink-0 items-baseline gap-3">
             <span className="font-display text-xl leading-none tracking-[-0.03em]">Ángel Subías</span>
-            <span className="label-mono hidden text-muted-foreground transition-colors group-hover:text-signal xl:inline">/ Ing. Mecatrónica</span>
+            <span className="label-mono hidden text-muted-foreground transition-colors group-hover:text-signal 2xl:inline">/ {L("Ing. Mecatrónica", "Mechatronics Eng.")}</span>
           </Link>
 
           {/* Navegación desktop */}
           <nav className="ml-auto hidden items-center gap-1 lg:flex">
             {navItems.map((item, i) => (
-              <NavItem key={item.path} href={item.path} index={i + 1} label={item.label} active={isActive(item.path)} />
+              <NavItem
+                key={item.path}
+                href={item.path}
+                index={i + 1}
+                label={item.label}
+                active={isActive(item.path)}
+                // Entre lg y xl no caben los 8 enlaces: "Inicio" se oculta (la marca ya lleva al inicio)
+                className={item.path === "/" ? "hidden xl:flex" : undefined}
+              />
             ))}
           </nav>
 
@@ -96,7 +107,7 @@ export default function Header() {
                       whileTap={{ scale: 0.94 }}
                       transition={springSoft}
                       className="h-8 w-8 overflow-hidden rounded-full ring-1 ring-rock transition-shadow hover:ring-signal"
-                      aria-label="Menú de usuario"
+                      aria-label={L("Menú de usuario", "User menu")}
                     >
                       <img src={avatarSrc} alt="Avatar" className="h-full w-full object-cover" />
                     </motion.button>
@@ -109,19 +120,19 @@ export default function Header() {
                     <DropdownMenuSeparator />
                     <Link href="/profile">
                       <DropdownMenuItem className="cursor-pointer">
-                        <UserIcon className="mr-2 h-4 w-4" /> Perfil
+                        <UserIcon className="mr-2 h-4 w-4" /> {L("Perfil", "Profile")}
                       </DropdownMenuItem>
                     </Link>
                     {isAdmin && (
                       <Link href="/dashboard">
                         <DropdownMenuItem className="cursor-pointer">
-                          <LayoutDashboard className="mr-2 h-4 w-4" /> Panel de control
+                          <LayoutDashboard className="mr-2 h-4 w-4" /> {L("Panel de control", "Dashboard")}
                         </DropdownMenuItem>
                       </Link>
                     )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
+                      <LogOut className="mr-2 h-4 w-4" /> {L("Cerrar sesión", "Sign out")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -141,7 +152,7 @@ export default function Header() {
               size="icon"
               className="lg:hidden"
               onClick={() => setMobileMenuOpen((open) => !open)}
-              aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-label={mobileMenuOpen ? L("Cerrar menú", "Close menu") : L("Abrir menú", "Open menu")}
               aria-expanded={mobileMenuOpen}
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -201,20 +212,20 @@ export default function Header() {
                       </Link>
                       {isAdmin && (
                         <Link href="/dashboard" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent/60 hover:text-foreground">
-                          <LayoutDashboard className="h-4 w-4" /> Panel de control
+                          <LayoutDashboard className="h-4 w-4" /> {L("Panel de control", "Dashboard")}
                         </Link>
                       )}
                       <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-destructive hover:bg-destructive/10"
                       >
-                        <LogOut className="h-4 w-4" /> Cerrar sesión
+                        <LogOut className="h-4 w-4" /> {L("Cerrar sesión", "Sign out")}
                       </button>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2 px-1">
-                      <Link href="/login"><Button variant="outline" className="w-full">Iniciar sesión</Button></Link>
-                      <Link href="/register"><Button className="w-full">Registrarse</Button></Link>
+                      <Link href="/login"><Button variant="outline" className="w-full">{L("Iniciar sesión", "Sign in")}</Button></Link>
+                      <Link href="/register"><Button className="w-full">{L("Registrarse", "Sign up")}</Button></Link>
                     </div>
                   )}
                 </div>
@@ -228,7 +239,7 @@ export default function Header() {
 }
 
 /** Enlace de navegación: índice mono, punto naranja deslizante en la ruta activa y texto que se descifra al hover. */
-function NavItem({ href, index, label, active }: { href: string; index: number; label: string; active: boolean }) {
+function NavItem({ href, index, label, active, className }: { href: string; index: number; label: string; active: boolean; className?: string }) {
   const [text, play] = useScramble(label.toUpperCase());
   return (
     <Link
@@ -236,14 +247,15 @@ function NavItem({ href, index, label, active }: { href: string; index: number; 
       onMouseEnter={play}
       onFocus={play}
       className={cn(
-        "label-mono relative flex items-center gap-1.5 px-2.5 py-2 transition-colors duration-200",
+        "label-mono relative flex items-center gap-1.5 px-1.5 py-2 transition-colors duration-200 2xl:px-2.5",
+        className,
         active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
       )}
     >
       <span className="relative flex h-1.5 w-1.5 items-center justify-center">
         {active && <motion.span layoutId="nav-dot" transition={springSoft} className="absolute h-1.5 w-1.5 rounded-full bg-signal" />}
       </span>
-      <span className="text-[10px] text-muted-foreground/70">{String(index).padStart(2, "0")}</span>
+      <span className="hidden text-[10px] text-muted-foreground/70 2xl:inline">{String(index).padStart(2, "0")}</span>
       <span aria-label={label}>{text}</span>
     </Link>
   );

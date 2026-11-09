@@ -55,7 +55,8 @@ const resources = {
         sports: "Sports",
         travel: "Travel",
         reading: "Reading",
-        gallery: "Gallery"
+        gallery: "Gallery",
+        gym: "Gym"
       },
       skills: {
         title: "Technical Skills",
@@ -237,7 +238,8 @@ const resources = {
         sports: "Deportes",
         travel: "Viajes",
         reading: "Lectura",
-        gallery: "Galería"
+        gallery: "Galería",
+        gym: "Gym"
       },
       skills: {
         title: "Habilidades Técnicas",

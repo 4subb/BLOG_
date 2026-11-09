@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { SmartMedia } from "@/components/SmartMedia"; // 🟢 CONEXIÓN CDN: Importamos el componente inteligente
+import { useLang } from "@/lib/lang";
 
 type Category = (typeof postCategoryEnum.enumValues)[number];
 
@@ -22,6 +23,7 @@ export default function EditPostPage() {
   const [match, params] = useRoute("/post/:id/edit");
   const postId = params?.id;
   const [, setLocation] = useLocation();
+  const { L } = useLang();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -41,7 +43,7 @@ export default function EditPostPage() {
     const fetchPostData = async () => {
       try {
         const res = await fetch(`/api/posts/${postId}/admin`, { credentials: 'include' });
-        if (!res.ok) throw new Error("Error cargando la información del post.");
+        if (!res.ok) throw new Error(L("Error cargando la información del post.", "Error loading the post."));
         const data = await res.json();
         const post = data.post ? data.post : data;
         
@@ -66,7 +68,7 @@ export default function EditPostPage() {
 
   const handleSubmit = async (evento: React.FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
-    setIsError(false); setMessage('Guardando...');
+    setIsError(false); setMessage(L('Guardando...', 'Saving...'));
     const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
 
     try {
@@ -83,7 +85,7 @@ export default function EditPostPage() {
         }),
       });
       if (response.ok) {
-        setIsError(false); setMessage(`¡Actualizado!`);
+        setIsError(false); setMessage(L("¡Actualizado!", "Updated!"));
         setTimeout(() => setLocation(`/post/${postId}`), 1000);
       } else {
         const data = await response.json();
@@ -91,7 +93,7 @@ export default function EditPostPage() {
       }
     } catch (error) { 
       setIsError(true); 
-      setMessage('Error de red al intentar guardar.'); 
+      setMessage(L('Error de red al intentar guardar.', 'Network error while saving.')); 
     }
   };
 
@@ -109,27 +111,27 @@ export default function EditPostPage() {
     ],
   };
 
-  if (isLoading) return <div className="flex flex-1 items-center justify-center py-24 text-sm text-muted-foreground animate-pulse">Cargando post…</div>;
+  if (isLoading) return <div className="flex flex-1 items-center justify-center py-24 text-sm text-muted-foreground animate-pulse">{L("Cargando post…", "Loading post…")}</div>;
 
   return (
     <div className="flex-1">
       <main className="page-container pb-24 pt-8 sm:pt-10">
-        <PageIntro index="A2" label="Admin / Editor" title="Editar entrada" />
+        <PageIntro index="A2" label="Admin / Editor" title={L("Editar entrada", "Edit post")} />
         <div className="max-w-3xl">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required/></div>
+            <div><Label>{L("Título", "Title")}</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required/></div>
             
             {/* 🟢 SECCIÓN MULTIMEDIA ACTUALIZADA CON SMARTMEDIA */}
             <div className="space-y-3">
-              <Label>Ruta / URL Multimedia (Imagen o Video de tu Servidor)</Label>
+              <Label>{L("Ruta / URL multimedia (imagen o video de tu servidor)", "Media path / URL (image or video from your server)")}</Label>
               <Input 
                 value={imageUrl} 
                 onChange={(e) => setImageUrl(e.target.value)} 
-                placeholder="Ej: /maquinados/electroerosion.mp4 o URL completa"
+                placeholder={L("Ej: /maquinados/electroerosion.mp4 o URL completa", "e.g. /maquinados/electroerosion.mp4 or a full URL")}
               />
               {imageUrl && (
                 <div className="mt-2 border rounded-md p-2 bg-slate-50">
-                  <p className="text-xs text-muted-foreground mb-1 font-medium">Vista previa desde tu CDN:</p>
+                  <p className="text-xs text-muted-foreground mb-1 font-medium">{L("Vista previa desde tu CDN:", "Preview from your CDN:")}</p>
                   <div className="max-h-[250px] overflow-hidden flex items-center justify-center">
                     <SmartMedia src={imageUrl} className="max-h-[230px] w-auto object-contain rounded" />
                   </div>
@@ -138,7 +140,7 @@ export default function EditPostPage() {
             </div>
             
             <div className="flex flex-col">
-              <Label className="mb-2">Contenido</Label>
+              <Label className="mb-2">{L("Contenido", "Content")}</Label>
               <div className="bg-white text-black rounded-md border">
                 <ReactQuill 
                   theme="snow" 
@@ -152,7 +154,7 @@ export default function EditPostPage() {
 
             <div className="flex gap-4 pt-8">
               <div className="flex-1">
-                <Label>Categoría</Label>
+                <Label>{L("Categoría", "Category")}</Label>
                 <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -160,11 +162,11 @@ export default function EditPostPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex-1"><Label>País</Label><Input value={country} onChange={(e) => setCountry(e.target.value)} /></div>
+              <div className="flex-1"><Label>{L("País", "Country")}</Label><Input value={country} onChange={(e) => setCountry(e.target.value)} /></div>
             </div>
-            <div><Label>Etiquetas (Separadas por coma)</Label><Input value={tags} onChange={(e) => setTags(e.target.value)} /></div>
-            <div className="flex items-center space-x-2"><Checkbox id="pub" checked={isPublished} onCheckedChange={(c) => setIsPublished(!!c)} /><Label htmlFor="pub">Publicar</Label></div>
-            <Button type="submit" size="lg" className="w-full">Guardar Cambios</Button>
+            <div><Label>{L("Etiquetas (separadas por coma)", "Tags (comma-separated)")}</Label><Input value={tags} onChange={(e) => setTags(e.target.value)} /></div>
+            <div className="flex items-center space-x-2"><Checkbox id="pub" checked={isPublished} onCheckedChange={(c) => setIsPublished(!!c)} /><Label htmlFor="pub">{L("Publicar", "Publish")}</Label></div>
+            <Button type="submit" size="lg" className="w-full">{L("Guardar cambios", "Save changes")}</Button>
             {message && <p className={isError ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>{message}</p>}
           </form>
         </div>

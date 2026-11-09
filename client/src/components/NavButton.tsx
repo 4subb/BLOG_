@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { type PostSummary } from "@shared/schema";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils"; // Usamos 'cn' para combinar clases condicionalmente
+import { useLang } from "@/lib/lang";
 
 interface NavButtonProps {
   post?: PostSummary; // El post al que enlaza (puede ser undefined)
@@ -13,6 +14,7 @@ interface NavButtonProps {
 export default function NavButton({ post, direction }: NavButtonProps) {
   const isPrev = direction === "prev";
   const isDisabled = !post;
+  const { L } = useLang();
 
   // Contenido interno (texto y flecha)
   const content = (
@@ -25,13 +27,13 @@ export default function NavButton({ post, direction }: NavButtonProps) {
     )}>
       <div className={cn("flex items-center text-xs mb-1.5 font-mono tracking-[0.12em] uppercase", isDisabled ? "text-muted-foreground" : "text-white/75")}>
         {isPrev ? (
-          <><ArrowLeft className="h-4 w-4 mr-2" /> Anterior</>
+          <><ArrowLeft className="h-4 w-4 mr-2" /> {L("Anterior", "Previous")}</>
         ) : (
-          <>Siguiente <ArrowRight className="h-4 w-4 ml-2" /></>
+          <>{L("Siguiente", "Next")} <ArrowRight className="h-4 w-4 ml-2" /></>
         )}
       </div>
       <div className={cn("font-semibold tracking-tight text-base md:text-lg leading-snug line-clamp-2", isDisabled ? "text-muted-foreground" : "text-white drop-shadow-md")}>
-        {isDisabled ? (isPrev ? "No hay posts anteriores" : "Es el último post") : post.title}
+        {isDisabled ? (isPrev ? L("No hay posts anteriores", "No previous posts") : L("Es el último post", "This is the latest post")) : post.title}
       </div>
     </div>
   );
