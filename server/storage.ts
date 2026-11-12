@@ -5,11 +5,13 @@ import {
   comments, type Comment, type InsertComment,
   postLikes, savedPosts,
   appRankings, appSchedule, type AppRanking, type InsertAppRanking, type AppEvent, type InsertAppEvent, gymLogs, type GymLog, type InsertGymLog,
+  gymExercises, gymPlans, type GymExercise, type InsertGymExercise, type InsertGymLogBatch,
   spotifyTokens, type SpotifyToken,
   media, type Media
 } from "@shared/schema";
 import { db } from "./db"; 
-import { eq, sql, desc, and, ne, lt, gt, asc } from "drizzle-orm"; 
+import { type GymPlan } from "@shared/gym";
+import { eq, sql, desc, and, ne, lt, gt, asc, inArray } from "drizzle-orm"; 
 
 export interface IStorage {
   // Usuarios
@@ -57,6 +59,13 @@ export interface IStorage {
   createGymLog(userId: string, log: InsertGymLog): Promise<GymLog>;
   getPublicGymLogs(userId: string): Promise<GymLog[] | { message: string }>;
   updateGymSettings(userId: string, isPublic: boolean, gender: string): Promise<User>;
+  createGymLogs(userId: string, batch: InsertGymLogBatch): Promise<GymLog[]>;
+  deleteGymLogs(userId: string, ids: string[]): Promise<number>;
+  getGymExercises(userId: string): Promise<GymExercise[]>;
+  createGymExercise(userId: string, ex: InsertGymExercise): Promise<GymExercise>;
+  deleteGymExercise(userId: string, id: string): Promise<boolean>;
+  getGymPlan(userId: string): Promise<GymPlan | null>;
+  saveGymPlan(userId: string, plan: GymPlan): Promise<GymPlan>;
 
   // Spotify (tokens ya cifrados por el llamador)
   getSpotifyToken(userId: string): Promise<SpotifyToken | undefined>;
@@ -115,7 +124,7 @@ export class DrizzleStorage implements IStorage {
   async getEvents(sport: string): Promise<AppEvent[]> { return db.select().from(appSchedule).where(eq(appSchedule.sport, sport as any)).orderBy(desc(appSchedule.eventDate)); }
   async deleteEvent(id: string): Promise<boolean> { const result = await db.delete(appSchedule).where(eq(appSchedule.id, id)).returning(); return result.length > 0; }
 
-  // --- Gym Tracker ---// --- Gym Tracker ---
+  // --- Gym Tracker ---
   async getGymLogsByUser(userId: string): Promise<GymLog[]> {
     if (!userId) return []; // Seguro anti-crash
     // OJO AQUÍ: La sintaxis de eq() debe llevar coma, no signo de igual
@@ -137,6 +146,45 @@ export class DrizzleStorage implements IStorage {
   async updateGymSettings(userId: string, isGymPublic: boolean, gender: string): Promise<User> {
     const [updatedUser] = await db.update(users).set({ isGymPublic, gender }).where(eq(users.id, userId)).returning();
     return updatedUser;
+  }
+
+  async createGymLogs(userId: string, batch: InsertGymLogBatch): Promise<GymLog[]> {
+    const date = batch.date ?? new Date();
+    return db.insert(gymLogs).values(batch.entries.map((e) => ({ ...e, userId, date }))).returning();
+  }
+
+  // Solo borra filas del propio usuario (el id solo no basta)
+  async deleteGymLogs(userId: string, ids: string[]): Promise<number> {
+    if (!ids.length) return 0;
+    const result = await db.delete(gymLogs).where(and(eq(gymLogs.userId, userId), inArray(gymLogs.id, ids))).returning({ id: gymLogs.id });
+    return result.length;
+  }
+
+  // Cada usuario arma su propio catálogo (empieza vacío)
+  async getGymExercises(userId: string): Promise<GymExercise[]> {
+    return db.select().from(gymExercises).where(eq(gymExercises.userId, userId)).orderBy(asc(gymExercises.createdAt));
+  }
+
+  async createGymExercise(userId: string, ex: InsertGymExercise): Promise<GymExercise> {
+    const [row] = await db.insert(gymExercises).values({ ...ex, userId }).returning();
+    return row;
+  }
+
+  async getGymPlan(userId: string): Promise<GymPlan | null> {
+    const [row] = await db.select().from(gymPlans).where(eq(gymPlans.userId, userId));
+    return row?.plan ?? null;
+  }
+
+  async saveGymPlan(userId: string, plan: GymPlan): Promise<GymPlan> {
+    const [row] = await db.insert(gymPlans).values({ userId, plan })
+      .onConflictDoUpdate({ target: gymPlans.userId, set: { plan, updatedAt: new Date() } })
+      .returning();
+    return row.plan;
+  }
+
+  async deleteGymExercise(userId: string, id: string): Promise<boolean> {
+    const result = await db.delete(gymExercises).where(and(eq(gymExercises.userId, userId), eq(gymExercises.id, id))).returning({ id: gymExercises.id });
+    return result.length > 0;
   }
 
   // --- Global Travel Dashboard ---

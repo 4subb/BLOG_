@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, pgEnum, timestamp, jsonb, boolean, integer, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, pgEnum, timestamp, jsonb, boolean, integer, real, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod"; 
+import { MUSCLE_GROUPS, MOVEMENT_PATTERNS, type GymPlan } from "./gym";
 
 // --- ENUMS ---
 export const userRoleEnum = pgEnum('user_role', ['admin', 'user']);
@@ -82,10 +83,30 @@ export const gymLogs = pgTable("gym_logs", {
   userId: varchar('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   date: timestamp("date").defaultNow().notNull(),
   exercise: text("exercise").notNull(),
-  weight: integer("weight").notNull(),
+  weight: real("weight").notNull(), // kg; admite 82.5 (antes integer)
   sets: integer("sets").notNull(),
   reps: integer("reps").notNull(),
   notes: text("notes"),
+});
+
+// Catálogo de ejercicios propio de cada usuario (empieza vacío; EXERCISE_LIBRARY en shared/gym.ts solo sugiere).
+// `aliases` alimenta al analizador del chat y `pattern` elige la animación.
+export const gymExercises = pgTable("gym_exercises", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  muscleGroup: text("muscle_group").notNull(),
+  pattern: text("pattern").notNull(),
+  aliases: text("aliases").array().notNull().default(sql`'{}'::text[]`),
+  bodyweight: boolean("bodyweight").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({ unq: unique("gym_exercises_user_name").on(t.userId, t.name) }));
+
+// Rutina semanal (una por usuario). JSON validado con gymPlanSchema; tipos en shared/gym.ts
+export const gymPlans = pgTable("gym_plans", {
+  userId: varchar('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  plan: jsonb("plan").$type<GymPlan>().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // --- Spotify: conexión persistente por usuario ---
@@ -149,6 +170,44 @@ export type InsertBucketList = z.infer<typeof insertBucketListSchema>;
 
 //--Schemas Zod
 export const insertGymLogSchema = createInsertSchema(gymLogs).omit({ id: true, date: true, userId: true });
+export const insertGymExerciseSchema = z.object({
+  name: z.string().trim().min(2).max(60),
+  muscleGroup: z.enum(MUSCLE_GROUPS),
+  pattern: z.enum(MOVEMENT_PATTERNS),
+  aliases: z.array(z.string().trim().min(2).max(40)).max(12).default([]),
+  bodyweight: z.boolean().default(false),
+});
+const planItemSchema = z.object({
+  exercise: z.string().trim().min(1).max(80),
+  sets: z.number().int().min(1).max(20),
+  reps: z.union([z.tuple([z.number().int().min(1).max(100), z.number().int().min(1).max(100)]), z.literal("max")]),
+  weight: z.number().min(0).max(1000).nullable(),
+  unit: z.enum(["kg", "lb"]),
+  per: z.enum(["total", "lado", "mano", "pierna"]),
+  note: z.string().max(200).optional(),
+});
+export const gymPlanSchema = z.object({
+  days: z.array(z.object({
+    dow: z.number().int().min(1).max(7),
+    title: z.string().max(80),
+    kind: z.enum(["gym", "cardio", "rest"]),
+    items: z.array(planItemSchema).max(20),
+    blocks: z.array(z.object({ title: z.string().max(60), lines: z.array(z.string().max(200)).max(20) })).max(6).optional(),
+    note: z.string().max(300).optional(),
+  })).max(7),
+  rules: z.array(z.string().max(300)).max(12),
+});
+// Registro desde el chat: varias entradas de golpe, con fecha opcional ("ayer ...")
+export const insertGymLogBatchSchema = z.object({
+  date: z.coerce.date().optional(),
+  entries: z.array(z.object({
+    exercise: z.string().trim().min(1).max(80),
+    weight: z.number().min(0).max(1000),
+    sets: z.number().int().min(1).max(50),
+    reps: z.number().int().min(1).max(500),
+    notes: z.string().max(300).nullable().optional(),
+  })).min(1).max(40),
+});
 
 
 
@@ -196,3 +255,6 @@ export type InsertAppEvent = typeof appSchedule.$inferInsert;
 
 export type GymLog = typeof gymLogs.$inferSelect;
 export type InsertGymLog = z.infer<typeof insertGymLogSchema>;
+export type GymExercise = typeof gymExercises.$inferSelect;
+export type InsertGymExercise = z.infer<typeof insertGymExerciseSchema>;
+export type InsertGymLogBatch = z.infer<typeof insertGymLogBatchSchema>;

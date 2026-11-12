@@ -15,6 +15,9 @@ import {
   insertCommentSchema, 
   sportCategoryEnum, 
   insertGymLogSchema, 
+  insertGymLogBatchSchema,
+  insertGymExerciseSchema,
+  gymPlanSchema,
   insertVisitedPlaceSchema, 
   insertBucketListSchema
 } from '@shared/schema'; 
@@ -252,6 +255,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Registro múltiple desde el chat ("banca 80 3x10 y sentadilla 100 5x5")
+  app.post('/api/gym/batch', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    const val = insertGymLogBatchSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    res.status(201).json(await storage.createGymLogs(req.session.userId, val.data));
+  });
+
+  // Deshacer: borra varios registros propios a la vez
+  app.post('/api/gym/delete', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    const val = z.object({ ids: z.array(z.string().max(64)).min(1).max(100) }).safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    res.json({ deleted: await storage.deleteGymLogs(req.session.userId, val.data.ids) });
+  });
+
+  app.get('/api/gym/exercises', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    res.json(await storage.getGymExercises(req.session.userId));
+  });
+
+  app.post('/api/gym/exercises', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    const val = insertGymExerciseSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    const existing = await storage.getGymExercises(req.session.userId);
+    if (existing.some((e) => e.name.toLowerCase() === val.data.name.toLowerCase())) {
+      return res.status(409).json({ message: "Ese ejercicio ya está en tu catálogo" });
+    }
+    res.status(201).json(await storage.createGymExercise(req.session.userId, val.data));
+  });
+
+  app.delete('/api/gym/exercises/:id', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    const ok = await storage.deleteGymExercise(req.session.userId, req.params.id);
+    res.status(ok ? 200 : 404).json({ ok });
+  });
+
+  app.get('/api/gym/plan', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    res.json(await storage.getGymPlan(req.session.userId));
+  });
+
+  app.put('/api/gym/plan', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    const val = gymPlanSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    res.json(await storage.saveGymPlan(req.session.userId, val.data));
+  });
+
   app.patch('/api/gym/settings', async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
@@ -263,8 +316,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Gym de otro usuario (si lo hizo público): solo para usuarios registrados
   app.get('/api/gym/user/:userId', async (req, res) => {
     try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
       const result = await storage.getPublicGymLogs(req.params.userId);
       if ('message' in result) return res.status(403).json(result);
       res.json(result);

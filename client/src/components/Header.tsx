@@ -45,7 +45,8 @@ export default function Header() {
     { path: "/viajes", label: t("nav.travel") },
     { path: "/lectura", label: t("nav.reading") },
     { path: "/galeria", label: t("nav.gallery") },
-    { path: "/gym", label: t("nav.gym") },
+    // El Gym es personal: solo se muestra a usuarios con sesión
+    ...(isAuthenticated ? [{ path: "/gym", label: t("nav.gym") }] : []),
   ];
 
   const isActive = (path: string) => (path === "/" ? location === "/" : location.startsWith(path));
