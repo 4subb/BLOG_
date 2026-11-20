@@ -102,6 +102,14 @@ export const gymExercises = pgTable("gym_exercises", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => ({ unq: unique("gym_exercises_user_name").on(t.userId, t.name) }));
 
+// Marcadores del día: ejercicios/bloques marcados como hechos y "rutina completa". `day` = YYYY-MM-DD local.
+export const gymDays = pgTable("gym_days", {
+  userId: varchar('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  day: varchar("day", { length: 10 }).notNull(),
+  done: text("done").array().notNull().default(sql`'{}'::text[]`),
+  completedAt: timestamp("completed_at"),
+}, (t) => ({ pk: unique("gym_days_user_day").on(t.userId, t.day) }));
+
 // Rutina semanal (una por usuario). JSON validado con gymPlanSchema; tipos en shared/gym.ts
 export const gymPlans = pgTable("gym_plans", {
   userId: varchar('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
@@ -185,6 +193,8 @@ const planItemSchema = z.object({
   unit: z.enum(["kg", "lb"]),
   per: z.enum(["total", "lado", "mano", "pierna"]),
   note: z.string().max(200).optional(),
+  progressedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  prevWeight: z.number().min(0).max(1000).nullable().optional(),
 });
 export const gymPlanSchema = z.object({
   days: z.array(z.object({
@@ -196,6 +206,10 @@ export const gymPlanSchema = z.object({
     note: z.string().max(300).optional(),
   })).max(7),
   rules: z.array(z.string().max(300)).max(12),
+});
+export const gymDaySchema = z.object({
+  done: z.array(z.string().min(1).max(260)).max(60),
+  completed: z.boolean(),
 });
 // Registro desde el chat: varias entradas de golpe, con fecha opcional ("ayer ...")
 export const insertGymLogBatchSchema = z.object({
@@ -258,3 +272,4 @@ export type InsertGymLog = z.infer<typeof insertGymLogSchema>;
 export type GymExercise = typeof gymExercises.$inferSelect;
 export type InsertGymExercise = z.infer<typeof insertGymExerciseSchema>;
 export type InsertGymLogBatch = z.infer<typeof insertGymLogBatchSchema>;
+export type GymDay = typeof gymDays.$inferSelect;

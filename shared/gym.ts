@@ -120,6 +120,8 @@ export type ParsedEntry = {
 export type ParseResult =
   | { intent: "undo" }
   | { intent: "help" }
+  | { intent: "finish" }                          // "terminé", "rutina completa"
+  | { intent: "done"; exercise: string }          // "remo listo", "ya completé dominadas"
   | { intent: "query"; exercise: string | null }
   | {
       intent: "log";
@@ -162,10 +164,13 @@ const UNIT = "(kg|kgs|kilos?|k|lbs?|libras?)";
 const NUM = "(\\d+(?:\\.\\d+)?)";
 const toKg = (n: number, unit?: string) => (unit && /^(lb|libra)/.test(unit) ? roundTo(n * 0.4536, 0.5) : n);
 
-type Group = { weight: number | null; sets: number | null; reps: number | null; pos: number };
+type Group = { weight: number | null; sets: number | null; reps: number | null; pos: number; bare?: boolean };
 
-/** Extrae series/repeticiones/peso de un trozo de texto que habla de UN ejercicio. */
-export function parseNumbers(segment: string): Group[] {
+/**
+ * Extrae series/repeticiones/peso de un trozo de texto que habla de UN ejercicio.
+ * `repsFirst`: los números sueltos son repeticiones (serie a serie, o ejercicios de peso corporal).
+ */
+export function parseNumbers(segment: string, repsFirst = false): Group[] {
   let rest = ` ${segment} `;
   const eat = (re: RegExp, fn: (m: string[], pos: number) => void) => {
     rest = rest.replace(re, (...args) => {
@@ -198,7 +203,32 @@ export function parseNumbers(segment: string): Group[] {
   eat(/(\d+)\s*(?:series|serie|sets?)\b/g, (m) => { sets = +m[1]; });
   eat(/(\d+)\s*(?:repeticiones|repes|reps?|veces)\b/g, (m) => { reps = +m[1]; });
   eat(new RegExp(`${NUM}\\s*${UNIT}\\b`, "g"), (m, pos) => weights.push({ v: toKg(+m[1], m[2]), pos, explicit: true }));
-  eat(new RegExp(`${NUM}`, "g"), (m, pos) => weights.push({ v: +m[1], pos, explicit: false }));
+  // "con 60", "@60" → peso aunque no lleve unidad
+  eat(new RegExp(`(?:\\bcon|@)\\s*${NUM}`, "g"), (m, pos) => weights.push({ v: +m[1], pos, explicit: true }));
+  const bare: { v: number; pos: number }[] = [];
+  eat(new RegExp(`${NUM}`, "g"), (m, pos) => bare.push({ v: +m[1], pos }));
+
+  // Números sueltos: ¿peso o repeticiones?
+  const structured = groups.length || pairs.length || repLists.length || sets !== null || reps !== null;
+  if (bare.length && !structured) {
+    const max = Math.max(...bare.map((b) => b.v));
+    const others = bare.filter((b) => b.v !== max);
+    if (repsFirst || weights.length) {
+      // "8 7 6 6" → una serie por número
+      repLists.push({ reps: bare.map((b) => b.v), pos: bare[0].pos });
+    } else if (bare.length === 1) {
+      groups.push({ weight: bare[0].v, sets: null, reps: null, pos: bare[0].pos, bare: true }); // se decide con el historial
+    } else if (max > 30 || (others.length && max >= 2 * Math.max(...others.map((b) => b.v)))) {
+      // "banca 60 8 7 6" → 60 kg; 8, 7, 6 reps
+      const wi = bare.findIndex((b) => b.v === max);
+      weights.push({ v: max, pos: bare[wi].pos, explicit: false });
+      repLists.push({ reps: bare.filter((_, i) => i !== wi).map((b) => b.v), pos: bare[0].pos });
+    } else {
+      repLists.push({ reps: bare.map((b) => b.v), pos: bare[0].pos });
+    }
+  } else {
+    for (const b of bare) weights.push({ v: b.v, pos: b.pos, explicit: false });
+  }
   weights.sort((x, y) => x.pos - y.pos);
 
   const nearestWeight = (pos: number) =>
@@ -246,10 +276,26 @@ function dayOffsetOf(text: string) {
  *  "curl 3x12"                       (sin peso → usa el de la última vez)
  *  "récord en banca" · "deshacer" · "ayuda"
  */
-export function parseWorkoutMessage(input: string, catalog: CatalogItem[], history: HistoryItem[] = []): ParseResult {
+const STOP = new Set([
+  "hoy", "hice", "hize", "he", "hecho", "ayer", "anteayer", "today", "did", "y", "e", "mas", "luego", "ahora", "despues",
+  "serie", "series", "set", "sets", "primera", "primer", "segunda", "tercera", "tercer", "cuarta", "quinta", "sexta",
+  "ultima", "otra", "siguiente", "salieron", "salio", "sali", "logre", "saque", "reps", "rep", "repeticiones", "repes",
+  "con", "de", "la", "el", "en", "me", "a", "al", "las", "los", "fueron", "fue", "then", "and", "first", "second",
+  "third", "fourth", "fifth", "last", "another", "next", "kg", "kilos", "lb", "lbs", "x",
+]);
+
+/**
+ * `context`: ejercicio en curso (el último registrado). Si el mensaje no nombra ninguno
+ * ("segunda serie 7", "8 7 6"), los números son series de ese ejercicio.
+ */
+export function parseWorkoutMessage(input: string, catalog: CatalogItem[], history: HistoryItem[] = [], context: string | null = null): ParseResult {
   let text = normalize(input).trim();
   // decimales con coma solo cuando van pegados a una unidad: "82,5kg" (no "60x10,70x8")
   text = text.replace(/(\d+),(\d{1,2})(?=\s*(?:kg|kilos?|k|lbs?|libras?)\b)/g, "$1.$2").replace(/\bpor\b/g, "x");
+  // Ordinales de serie: "1ra serie", "2ª serie", "serie 3:" → solo numeran, no son datos
+  text = text
+    .replace(/\b\d+\s*(?:ra|da|ta|era|er|na|ma|va|a|o|ª|º|°)\s*(?:serie|set)\b/g, " ")
+    .replace(/\b(?:serie|set)\s*(?:#|n[oº°]?\.?)?\s*\d+\s*[:=]/g, " ");
 
   if (/^(deshacer|deshaz|undo|borra(r)?( el)? ultimo|elimina(r)?( el)? ultimo)\b/.test(text)) return { intent: "undo" };
   if (/^(ayuda|help|\?|como funciona)/.test(text)) return { intent: "help" };
@@ -258,6 +304,13 @@ export function parseWorkoutMessage(input: string, catalog: CatalogItem[], histo
   const matches = findExercises(tokens, catalog);
   const hasNumbers = /\d/.test(text);
 
+  const doneWords = /\b(listo|lista|hecho|hecha|completad[oa]|complete|termine|terminado|terminada|acabe|done|finished)\b/;
+  if (!hasNumbers && doneWords.test(text)) {
+    if (matches.length) return { intent: "done", exercise: matches[0].name };
+    // "listo" a secas con un ejercicio en curso → ese ejercicio; "terminé" a secas → la rutina
+    if (context && /^(ya )?(listo|lista|hecho|hecha|done)\b/.test(text)) return { intent: "done", exercise: context };
+    if (/\b(rutina|entreno|entrenamiento|dia|sesion|todo|workout)\b/.test(text) || /^(ya )?(termine|acabe|listo|done|finished)\b/.test(text)) return { intent: "finish" };
+  }
   if (!hasNumbers && /\b(record|pr|maximo|mejor|progreso|ultima vez|ultimo|cuanto|best)\b/.test(text)) {
     return { intent: "query", exercise: matches[0]?.name ?? null };
   }
@@ -268,7 +321,7 @@ export function parseWorkoutMessage(input: string, catalog: CatalogItem[], histo
   const incomplete: ParsedEntry[] = [];
   let unknownName: string | null = null;
 
-  type Seg = { name: string; text: string };
+  type Seg = { name: string; text: string; context?: boolean };
   const segments: Seg[] = [];
   if (matches.length) {
     matches.forEach((m, i) => {
@@ -279,14 +332,16 @@ export function parseWorkoutMessage(input: string, catalog: CatalogItem[], histo
       segments.push({ name: m.name, text: [...prefix, ...own].join(" ") });
     });
   } else if (hasNumbers) {
-    // Ejercicio desconocido: las palabras antes del primer número
-    const stop = new Set(["hoy", "hice", "he", "hecho", "ayer", "anteayer", "today", "did", "y", "mas", "luego"]);
     const firstNum = tokens.findIndex((t) => /\d/.test(t));
-    const words = tokens.slice(0, firstNum < 0 ? tokens.length : firstNum).filter((t) => /^[a-z]+$/.test(t) && !stop.has(t));
+    const words = tokens.slice(0, firstNum < 0 ? tokens.length : firstNum).filter((t) => /^[a-z]+$/.test(t) && !STOP.has(t));
     if (words.length) {
+      // Ejercicio desconocido: las palabras antes del primer número
       unknownName = words.slice(-4).join(" ");
       unknownName = unknownName.charAt(0).toUpperCase() + unknownName.slice(1);
       segments.push({ name: unknownName, text: tokens.slice(firstNum).join(" ") });
+    } else if (context) {
+      // Serie a serie del ejercicio en curso: "segunda serie 7"
+      segments.push({ name: context, text: tokens.join(" "), context: true });
     }
   }
 
@@ -295,10 +350,16 @@ export function parseWorkoutMessage(input: string, catalog: CatalogItem[], histo
     const last = history
       .filter((h) => normalize(h.exercise) === normalize(seg.name))
       .sort((a, b) => +new Date(b.date) - +new Date(a.date))[0];
-    const groups = parseNumbers(seg.text);
+    const groups = parseNumbers(seg.text, !!cat?.bodyweight || !!seg.context);
     if (!groups.length) groups.push({ weight: null, sets: null, reps: null, pos: 0 });
 
     for (const g of groups) {
+      // Un número suelto: si es mucho menor que el peso habitual, son repeticiones ("banca 8" con 60 kg)
+      if (g.bare && g.weight !== null && last && last.weight > 0 && g.weight <= 30 && g.weight < last.weight * 0.6) {
+        g.reps = g.weight; g.sets = 1; g.weight = null;
+      }
+      // Serie a serie: cada número es una serie, no "N series como la última vez"
+      if (g.reps !== null && g.sets === null && (seg.context || cat?.bodyweight)) g.sets = 1;
       const e: ParsedEntry = { exercise: seg.name, weight: g.weight, sets: g.sets, reps: g.reps, assumed: [] };
       if (e.reps === null || e.sets === null) {
         if (last) { e.sets = e.sets ?? last.sets; e.reps = e.reps ?? last.reps; e.assumed.push("setsreps"); }
@@ -328,6 +389,9 @@ export type PlanItem = {
   /** Cómo se lee el peso: total, por lado de la barra/máquina, por mano o por pierna */
   per: "total" | "lado" | "mano" | "pierna";
   note?: string;
+  /** Día (YYYY-MM-DD) de la sesión que provocó el último cambio automático de peso, y el peso anterior */
+  progressedOn?: string;
+  prevWeight?: number | null;
 };
 export type PlanBlock = { title: string; lines: string[] };
 export type PlanDay = {
@@ -352,33 +416,193 @@ export const weightLabel = (it: Pick<PlanItem, "weight" | "unit" | "per">, es = 
 /** Día de la semana 1-7 (lunes = 1) */
 export const isoDow = (d = new Date()) => ((d.getDay() + 6) % 7) + 1;
 
-export type Progress =
-  | { status: "up"; next: number; last: string }   // completaste el tope del rango → sube
-  | { status: "hold"; last: string }               // aún no: repite el peso
-  | { status: "new" };                             // sin registros todavía
+export const todayKey = (d = new Date()) => d.toLocaleDateString("sv-SE"); // YYYY-MM-DD local
 
 type LogLike = { exercise: string; weight: number; sets: number; reps: number; date: string | Date };
-const dayOf = (d: string | Date) => new Date(d).toLocaleDateString("sv-SE");
+export type Session = { day: string; weightKg: number; reps: number[]; total: number };
+
+/** Sesiones de un ejercicio (más reciente primero). Las series más ligeras (calentamiento) no cuentan. */
+export function sessionsOf(exercise: string, logs: LogLike[]): Session[] {
+  const byDay = new Map<string, LogLike[]>();
+  for (const l of logs) {
+    if (normalize(l.exercise) !== normalize(exercise)) continue;
+    const k = todayKey(new Date(l.date));
+    byDay.set(k, [...(byDay.get(k) ?? []), l]);
+  }
+  return Array.from(byDay.entries())
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([day, ls]) => {
+      const flat = [...ls].sort((a, b) => +new Date(a.date) - +new Date(b.date))
+        .flatMap((l) => Array.from({ length: l.sets }, () => ({ w: l.weight, r: l.reps })));
+      const top = Math.max(...flat.map((f) => f.w));
+      const reps = flat.filter((f) => f.w >= top - 1).map((f) => f.r);
+      return { day, weightKg: top, reps, total: reps.reduce((a, r) => a + r, 0) };
+    });
+}
+
+const LOWER = new Set(["squat", "hinge", "legpress", "lunge"]);
 
 /**
- * Regla de la rutina: "cuando completes el tope del rango en todas las series, sube 2.5 kg".
- * Mira la última sesión del ejercicio: si hay ≥ `sets` series con ≥ tope de reps al peso
- * objetivo (o más), propone el siguiente peso (+2.5 kg, o +5 lb en material en libras).
+ * Incremento de carga según el ejercicio (pauta NSCA para nivel intermedio):
+ * tren inferior compuesto +5 kg; tren superior, máquinas y aislamiento +2.5 kg;
+ * mancuernas +2.5 kg por mano; material en libras +5 lb (+10 lb en máquinas de placas).
  */
-export function progressFor(it: PlanItem, logs: LogLike[]): Progress {
-  const mine = logs.filter((l) => normalize(l.exercise) === normalize(it.exercise));
-  if (!mine.length) return { status: "new" };
-  const lastDay = mine.reduce((a, l) => (dayOf(l.date) > a ? dayOf(l.date) : a), "");
-  const session = mine.filter((l) => dayOf(l.date) === lastDay).sort((a, b) => +new Date(a.date) - +new Date(b.date));
-  // "10-10-6" o "4×8 @ 60"
-  const flat = session.flatMap((l) => Array.from({ length: l.sets }, () => ({ w: l.weight, r: l.reps })));
-  const last = flat.every((s) => s.w === flat[0].w)
-    ? `${flat.map((s) => s.r).join("-")}${flat[0].w ? ` @ ${formatKg(flat[0].w)} kg` : ""}`
-    : flat.map((s) => `${formatKg(s.w)}×${s.r}`).join(", ");
-  if (it.reps === "max" || it.weight === null) return { status: "hold", last };
-  const target = planWeightKg(it)!;
-  const top = it.reps[1];
-  const done = flat.filter((s) => s.w >= target - 0.5 && s.r >= top).length;
-  if (done >= it.sets) return { status: "up", next: it.weight + (it.unit === "lb" ? 5 : 2.5), last };
-  return { status: "hold", last };
+export function loadStep(it: Pick<PlanItem, "unit" | "per">, pattern = ""): number {
+  if (it.unit === "lb") return it.per === "total" ? 10 : 5;
+  if (it.per === "lado") return LOWER.has(pattern) ? 5 : 2.5;
+  if (it.per === "mano" || it.per === "pierna") return 2.5;
+  return LOWER.has(pattern) ? 5 : 2.5;
+}
+
+type Bi = { es: string; en: string };
+export type Verdict = {
+  kind: "new" | "incomplete" | "up" | "reps" | "hold" | "deload";
+  /** Peso objetivo para la próxima sesión (en la unidad del plan); null = peso corporal */
+  next: number | null;
+  /** Meta concreta de la próxima sesión */
+  goal: Bi;
+  why: Bi;
+  tip?: Bi;
+  session?: Session;
+  prev?: Session;
+  /** El cambio de peso de esta sesión ya está aplicado en el plan */
+  applied?: boolean;
+};
+
+const fmtReps = (r: number[]) => r.join("-");
+const unitW = (w: number | null, it: Pick<PlanItem, "unit">) => (w === null || w === 0 ? "" : ` @ ${formatKg(w)} ${it.unit}`);
+
+/**
+ * Entrenador: doble progresión con rango de repeticiones.
+ *  - Todas las series en el tope del rango → sube la carga (loadStep) y vuelve al mínimo.
+ *  - Dentro del rango → mismo peso, +1 rep por serie.
+ *  - Alguna serie bajo el mínimo → mismo peso; dos sesiones seguidas así → descarga −10 %.
+ *  - 3 sesiones al mismo peso sin sumar repeticiones → descarga −10 % y reconstruir.
+ *  - Peso corporal (máx): todas las series en 12+ (8+ con lastre) → +2.5 kg de lastre;
+ *    si no, superar el total de repeticiones de la sesión anterior.
+ */
+export function coach(it: PlanItem, logs: LogLike[], pattern = ""): Verdict {
+  const sessions = sessionsOf(it.exercise, logs);
+  const s0 = sessions[0];
+  const step = loadStep(it, pattern);
+  const applied = !!s0 && it.progressedOn === s0.day;
+  // Peso con el que se evalúa la sesión: si ya se aplicó un cambio por ella, el de antes del cambio
+  const W = applied ? (it.prevWeight ?? null) : it.weight;
+  const Wkg = W === null ? 0 : it.unit === "lb" ? roundTo(W * LB, 0.5) : W;
+
+  if (!s0) {
+    return {
+      kind: "new", next: it.weight,
+      goal: it.reps === "max"
+        ? { es: `${it.sets} series al máximo`, en: `${it.sets} sets to max` }
+        : { es: `${it.sets}×${it.reps[0]}-${it.reps[1]}${unitW(it.weight, it)}`, en: `${it.sets}×${it.reps[0]}-${it.reps[1]}${unitW(it.weight, it)}` },
+      why: { es: "Primera sesión: anota cada serie y la rutina se ajusta sola.", en: "First session: log every set and the plan adapts." },
+    };
+  }
+
+  const prev = sessions[1];
+  const done = s0.reps.length;
+  const tip = done >= 3 && s0.reps[0] - s0.reps[done - 1] >= Math.max(3, Math.ceil(s0.reps[0] * 0.35))
+    ? { es: "Mucha caída entre la 1.ª y la última serie: descansa 2-3 min completos.", en: "Big drop from first to last set: rest a full 2-3 min." }
+    : undefined;
+
+  if (done < it.sets && s0.day === todayKey()) {
+    return {
+      kind: "incomplete", next: it.weight, session: s0, prev, tip,
+      goal: { es: `Faltan ${it.sets - done} serie(s)`, en: `${it.sets - done} set(s) to go` },
+      why: { es: `Llevas ${done}/${it.sets}: ${fmtReps(s0.reps)}.`, en: `${done}/${it.sets} done: ${fmtReps(s0.reps)}.` },
+    };
+  }
+
+  const reps = s0.reps.slice(0, it.sets);
+
+  // ── Peso corporal / al máximo ──
+  if (it.reps === "max") {
+    const threshold = Wkg > 0 ? 8 : 12;
+    if (reps.length >= it.sets && Math.min(...reps) >= threshold) {
+      const next = (W ?? 0) + (it.unit === "lb" ? 5 : 2.5);
+      return {
+        kind: "up", next, session: s0, prev, applied, tip,
+        goal: { es: `${it.sets} series al máximo con ${formatKg(next)} ${it.unit} de lastre`, en: `${it.sets} sets to max with ${formatKg(next)} ${it.unit} added` },
+        why: { es: `Todas las series en ${threshold}+ (${fmtReps(reps)}): toca añadir lastre.`, en: `Every set at ${threshold}+ (${fmtReps(reps)}): add weight.` },
+      };
+    }
+    const better = !!prev && s0.total > prev.total;
+    const stalled = !!prev && !!sessions[2] && s0.total <= prev.total && s0.total <= sessions[2].total;
+    return {
+      kind: better ? "reps" : "hold", next: W, session: s0, prev,
+      tip: stalled
+        ? { es: "3 sesiones sin subir el total: añade una serie extra o haz negativas lentas (3-5 s).", en: "3 sessions without progress: add a set or do slow negatives (3-5 s)." }
+        : tip,
+      goal: { es: `Supera ${s0.total} repeticiones en total`, en: `Beat ${s0.total} total reps` },
+      why: better
+        ? { es: `Subiste de ${prev!.total} a ${s0.total} repeticiones (${fmtReps(reps)}). Mismo plan, a por más.`, en: `Up from ${prev!.total} to ${s0.total} reps (${fmtReps(reps)}). Same plan, go for more.` }
+        : prev
+          ? { es: `${s0.total} repeticiones (${fmtReps(reps)}), sin mejorar las ${prev.total} anteriores. Mantén.`, en: `${s0.total} reps (${fmtReps(reps)}), not above ${prev.total}. Hold.` }
+          : { es: `${s0.total} repeticiones (${fmtReps(reps)}). Esa es la marca a superar.`, en: `${s0.total} reps (${fmtReps(reps)}). That's the mark to beat.` },
+    };
+  }
+
+  // ── Con rango de repeticiones ──
+  const [min, max] = it.reps;
+  if (W === null) {
+    return { kind: "hold", next: null, session: s0, prev, goal: { es: `${it.sets}×${min}-${max}`, en: `${it.sets}×${min}-${max}` }, why: { es: `${fmtReps(reps)}.`, en: `${fmtReps(reps)}.` } };
+  }
+  if (s0.weightKg < Wkg - Math.max(1, Wkg * 0.02)) {
+    return {
+      kind: "hold", next: W, session: s0, prev, tip,
+      goal: { es: `${it.sets}×${min}-${max}${unitW(W, it)}`, en: `${it.sets}×${min}-${max}${unitW(W, it)}` },
+      why: { es: `Trabajaste con ${formatKg(s0.weightKg)} kg, por debajo del objetivo: repite ${formatKg(W)} ${it.unit}.`, en: `You used ${formatKg(s0.weightKg)} kg, below target: repeat ${formatKg(W)} ${it.unit}.` },
+    };
+  }
+
+  // −10 % redondeado al escalón de carga más cercano (siempre al menos un escalón por debajo)
+  const deload = Math.max(step, Math.min(W - step, Math.round((W * 0.9) / step) * step));
+  const sameWeight = (s?: Session) => !!s && Math.abs(s.weightKg - s0.weightKg) <= 1;
+
+  if (reps.length >= it.sets && reps.every((r) => r >= max)) {
+    const next = W + step;
+    const big = next / W > 1.15;
+    return {
+      kind: "up", next, session: s0, prev, applied, tip,
+      goal: { es: `${it.sets}×${min}${unitW(next, it)} (vuelve al mínimo del rango)`, en: `${it.sets}×${min}${unitW(next, it)} (back to the bottom of the range)` },
+      why: {
+        es: `Todas las series en el tope (${fmtReps(reps)}): sube ${formatKg(step)} ${it.unit}.${big ? ` Es un salto grande en %: si no llegas a ${min}, vuelve al peso anterior y suma reps.` : ""}`,
+        en: `Every set at the top (${fmtReps(reps)}): add ${formatKg(step)} ${it.unit}.${big ? ` Big % jump: if you can't hit ${min}, go back and add reps.` : ""}`,
+      },
+    };
+  }
+  if (reps.some((r) => r < min)) {
+    const twice = sameWeight(prev) && prev!.reps.slice(0, it.sets).some((r) => r < min);
+    if (twice) {
+      return {
+        kind: "deload", next: deload, session: s0, prev, applied, tip,
+        goal: { es: `${it.sets}×${max}${unitW(deload, it)} y reconstruye`, en: `${it.sets}×${max}${unitW(deload, it)} and rebuild` },
+        why: { es: `Dos sesiones seguidas con series por debajo de ${min} (${fmtReps(reps)}): descarga −10 %.`, en: `Two sessions in a row with sets under ${min} (${fmtReps(reps)}): deload −10%.` },
+      };
+    }
+    return {
+      kind: "hold", next: W, session: s0, prev, tip,
+      goal: { es: `${it.sets}×${min}+${unitW(W, it)}`, en: `${it.sets}×${min}+${unitW(W, it)}` },
+      why: { es: `Alguna serie por debajo de ${min} (${fmtReps(reps)}): mismo peso, busca ${min}+ en todas.`, en: `A set under ${min} (${fmtReps(reps)}): same weight, aim for ${min}+ on all.` },
+    };
+  }
+  // Dentro del rango
+  if (sameWeight(prev) && sameWeight(sessions[2]) && s0.total <= sessions[2].total) {
+    return {
+      kind: "deload", next: deload, session: s0, prev, applied, tip,
+      goal: { es: `${it.sets}×${max}${unitW(deload, it)} y reconstruye`, en: `${it.sets}×${max}${unitW(deload, it)} and rebuild` },
+      why: { es: `3 sesiones con ${formatKg(W)} ${it.unit} sin sumar repeticiones: descarga −10 % y vuelve a subir.`, en: `3 sessions at ${formatKg(W)} ${it.unit} without adding reps: deload −10% and climb back.` },
+    };
+  }
+  const target = reps.map((r) => Math.min(max, r + 1));
+  const gained = sameWeight(prev) ? s0.total - prev!.total : 0;
+  return {
+    kind: "reps", next: W, session: s0, prev, tip,
+    goal: { es: `${fmtReps(target)}${unitW(W, it)}`, en: `${fmtReps(target)}${unitW(W, it)}` },
+    why: {
+      es: `Dentro del rango (${fmtReps(reps)}${gained > 0 ? `, +${gained} reps vs la última` : ""}): mismo peso, +1 rep por serie hasta ${max} en todas.`,
+      en: `In range (${fmtReps(reps)}${gained > 0 ? `, +${gained} reps vs last` : ""}): same weight, +1 rep per set until all hit ${max}.`,
+    },
+  };
 }

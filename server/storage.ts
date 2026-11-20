@@ -5,13 +5,13 @@ import {
   comments, type Comment, type InsertComment,
   postLikes, savedPosts,
   appRankings, appSchedule, type AppRanking, type InsertAppRanking, type AppEvent, type InsertAppEvent, gymLogs, type GymLog, type InsertGymLog,
-  gymExercises, gymPlans, type GymExercise, type InsertGymExercise, type InsertGymLogBatch,
+  gymExercises, gymPlans, gymDays, type GymDay, type GymExercise, type InsertGymExercise, type InsertGymLogBatch,
   spotifyTokens, type SpotifyToken,
   media, type Media
 } from "@shared/schema";
 import { db } from "./db"; 
 import { type GymPlan } from "@shared/gym";
-import { eq, sql, desc, and, ne, lt, gt, asc, inArray } from "drizzle-orm"; 
+import { eq, sql, desc, and, ne, lt, gt, gte, asc, inArray } from "drizzle-orm"; 
 
 export interface IStorage {
   // Usuarios
@@ -65,6 +65,8 @@ export interface IStorage {
   createGymExercise(userId: string, ex: InsertGymExercise): Promise<GymExercise>;
   deleteGymExercise(userId: string, id: string): Promise<boolean>;
   getGymPlan(userId: string): Promise<GymPlan | null>;
+  getGymDays(userId: string, from: string): Promise<GymDay[]>;
+  saveGymDay(userId: string, day: string, done: string[], completed: boolean): Promise<GymDay>;
   saveGymPlan(userId: string, plan: GymPlan): Promise<GymPlan>;
 
   // Spotify (tokens ya cifrados por el llamador)
@@ -167,6 +169,20 @@ export class DrizzleStorage implements IStorage {
 
   async createGymExercise(userId: string, ex: InsertGymExercise): Promise<GymExercise> {
     const [row] = await db.insert(gymExercises).values({ ...ex, userId }).returning();
+    return row;
+  }
+
+  async getGymDays(userId: string, from: string): Promise<GymDay[]> {
+    return db.select().from(gymDays).where(and(eq(gymDays.userId, userId), gte(gymDays.day, from))).orderBy(desc(gymDays.day));
+  }
+
+  async saveGymDay(userId: string, day: string, done: string[], completed: boolean): Promise<GymDay> {
+    const [existing] = await db.select().from(gymDays).where(and(eq(gymDays.userId, userId), eq(gymDays.day, day)));
+    // conserva la hora original de "completada" si ya lo estaba
+    const completedAt = completed ? (existing?.completedAt ?? new Date()) : null;
+    const [row] = await db.insert(gymDays).values({ userId, day, done, completedAt })
+      .onConflictDoUpdate({ target: [gymDays.userId, gymDays.day], set: { done, completedAt } })
+      .returning();
     return row;
   }
 

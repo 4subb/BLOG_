@@ -1,10 +1,10 @@
 import { useState, type KeyboardEvent } from "react";
 import { motion } from "framer-motion";
-import { formatKg, isoDow, progressFor, repsLabel, weightLabel, type PlanItem } from "@shared/gym";
+import { formatKg, isoDow, repsLabel, weightLabel, type PlanItem } from "@shared/gym";
 import { useLang } from "@/lib/lang";
 import { cn } from "@/lib/utils";
 import { fadeUp, staggerContainer } from "@/lib/motion";
-import { DOW_LONG, prefillFor } from "./PlanToday";
+import { DOW_LONG, dateOfDow, prefillFor } from "./PlanToday";
 import type { GymApi } from "./useGym";
 
 /** Peso editable en línea: clic → input; Enter/blur guarda, Esc cancela */
@@ -57,24 +57,30 @@ export default function WeekPlan({ gym, onPick }: { gym: GymApi; onPick: (t: str
           <motion.div key={d.dow} variants={fadeUp} className={cn("relative bg-background p-5", d.dow === today && "ring-1 ring-inset ring-signal")}>
             <div className="flex items-baseline justify-between gap-2">
               <p className="label-mono text-muted-foreground">{L(...DOW_LONG[d.dow - 1])}</p>
-              {d.dow === today && <span className="label-mono text-signal">{L("Hoy", "Today")}</span>}
+              {gym.dayRow(dateOfDow(d.dow))?.completedAt
+                ? <span className="label-mono text-signal">✓ {L("Completa", "Done")}</span>
+                : d.dow === today && <span className="label-mono text-signal">{L("Hoy", "Today")}</span>}
             </div>
             <p className="font-display text-lg font-semibold">{d.title}</p>
             {d.items.length > 0 && (
               <ul className="mt-3 space-y-2">
                 {d.items.map((it) => {
-                  const pr = progressFor(it, gym.logs);
+                  const v = gym.verdictFor(it, gym.logs);
+                  const pending = (v.kind === "up" || v.kind === "deload") && v.next !== it.weight && it.progressedOn !== v.session?.day;
                   return (
                     <li key={it.exercise} className="text-sm">
                       <button onClick={() => onPick(prefillFor(it))} className="text-left font-medium hover:text-signal">{it.exercise}</button>
                       <div className="flex flex-wrap items-center gap-x-2 font-mono text-xs text-muted-foreground">
                         <span>{it.sets}×{repsLabel(it)}</span>·<WeightCell it={it} gym={gym} />
-                        {pr.status === "up" && (
-                          <button onClick={() => gym.setPlanWeight(it.exercise, pr.next)} className="text-signal hover:underline">
-                            ↑ {formatKg(pr.next)}
+                        {pending && v.next !== null && (
+                          <button onClick={() => gym.applyVerdict(it, v)} className="text-signal hover:underline" title={L(v.why.es, v.why.en)}>
+                            {v.kind === "up" ? "↑" : "↓"} {formatKg(v.next)}
                           </button>
                         )}
                       </div>
+                      {v.kind !== "new" && v.kind !== "incomplete" && (
+                        <p className="text-[11px] text-muted-foreground" title={L(v.why.es, v.why.en)}>→ {L(v.goal.es, v.goal.en)}</p>
+                      )}
                     </li>
                   );
                 })}

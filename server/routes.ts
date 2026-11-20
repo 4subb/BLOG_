@@ -18,6 +18,7 @@ import {
   insertGymLogBatchSchema,
   insertGymExerciseSchema,
   gymPlanSchema,
+  gymDaySchema,
   insertVisitedPlaceSchema, 
   insertBucketListSchema
 } from '@shared/schema'; 
@@ -291,6 +292,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
     const ok = await storage.deleteGymExercise(req.session.userId, req.params.id);
     res.status(ok ? 200 : 404).json({ ok });
+  });
+
+  // Marcadores de días (ejercicios hechos / rutina completa). ?from=YYYY-MM-DD (por defecto, 60 días)
+  const dayRe = /^\d{4}-\d{2}-\d{2}$/;
+  app.get('/api/gym/days', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    const from = typeof req.query.from === "string" && dayRe.test(req.query.from)
+      ? req.query.from
+      : new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
+    res.json(await storage.getGymDays(req.session.userId, from));
+  });
+
+  app.put('/api/gym/days/:day', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    if (!dayRe.test(req.params.day)) return res.status(400).json({ message: "Fecha inválida" });
+    const val = gymDaySchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    res.json(await storage.saveGymDay(req.session.userId, req.params.day, val.data.done, val.data.completed));
   });
 
   app.get('/api/gym/plan', async (req, res) => {

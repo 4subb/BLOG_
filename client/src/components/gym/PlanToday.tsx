@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUp, Check } from "lucide-react";
-import { formatKg, isoDow, normalize, progressFor, repsLabel, weightLabel, type PlanBlock, type PlanItem } from "@shared/gym";
+import { ArrowDown, ArrowUp, Check, Undo2 } from "lucide-react";
+import { formatKg, isoDow, repsLabel, todayKey, weightLabel, type PlanBlock, type PlanItem } from "@shared/gym";
 import { useLang } from "@/lib/lang";
 import { cn } from "@/lib/utils";
 import { easeOutExpo } from "@/lib/motion";
@@ -13,7 +13,13 @@ export const DOW_LONG: [string, string][] = [
   ["Lunes", "Monday"], ["Martes", "Tuesday"], ["Miércoles", "Wednesday"], ["Jueves", "Thursday"],
   ["Viernes", "Friday"], ["Sábado", "Saturday"], ["Domingo", "Sunday"],
 ];
-const todayKey = () => new Date().toLocaleDateString("sv-SE");
+
+/** Fecha (YYYY-MM-DD) del día `dow` en la semana actual (lunes a domingo) */
+export const dateOfDow = (dow: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + dow - isoDow(d));
+  return todayKey(d);
+};
 
 /** Texto que se precarga en el chat al tocar un ejercicio del plan */
 export const prefillFor = (it: PlanItem) =>
@@ -21,57 +27,94 @@ export const prefillFor = (it: PlanItem) =>
     ? `${it.exercise.toLowerCase()} `
     : `${it.exercise.toLowerCase()} ${formatKg(it.weight)}${it.unit === "lb" ? " lb" : "kg"} ${it.sets}x`;
 
-function PlanRow({ it, gym, done, onPick }: { it: PlanItem; gym: GymApi; done: boolean; onPick: (t: string) => void }) {
+function Box({ on, onClick, title, locked }: { on: boolean; onClick?: () => void; title?: string; locked?: boolean }) {
+  return (
+    <motion.button
+      whileTap={onClick && !locked ? { scale: 0.85 } : undefined}
+      onClick={locked ? undefined : onClick}
+      disabled={!onClick}
+      title={title}
+      aria-pressed={on}
+      className={cn(
+        "mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-sm border transition-colors",
+        on ? "border-signal bg-signal text-white" : "border-rock hover:border-foreground",
+        !onClick && "cursor-default opacity-40",
+      )}
+    >
+      <AnimatePresence>{on && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Check className="h-3.5 w-3.5" /></motion.span>}</AnimatePresence>
+    </motion.button>
+  );
+}
+
+function PlanRow({ it, gym, isToday, onPick }: { it: PlanItem; gym: GymApi; isToday: boolean; onPick: (t: string) => void }) {
   const { L, es } = useLang();
-  const pr = progressFor(it, gym.logs);
-  const pattern = gym.exercises.find((e) => e.name === it.exercise)?.pattern ?? "curl";
+  const v = gym.verdictFor(it, gym.logs);
+  const pattern = gym.pattern(it.exercise) || "curl";
   const [hover, setHover] = useState(false);
+  const s0 = v.session;
+  const todaySets = s0?.day === todayKey() ? s0.reps.length : 0;
+  const marked = isToday && !!gym.dayRow()?.done.includes(it.exercise);
+  const auto = isToday && todaySets >= it.sets;
+  const done = marked || auto;
+  const pending = (v.kind === "up" || v.kind === "deload") && v.next !== it.weight && !(it.progressedOn === s0?.day);
+  const appliedToday = it.progressedOn === todayKey() && it.prevWeight !== undefined && it.weight !== it.prevWeight;
+  const unitOf = (w: number | null | undefined) => (w === null || w === undefined ? "—" : `${formatKg(w)} ${it.unit}`);
 
   return (
     <motion.li
       layout
       onHoverStart={() => setHover(true)}
       onHoverEnd={() => setHover(false)}
-      className={cn("group flex items-start gap-3 border-t border-rock/50 py-3 first:border-t-0", done && "opacity-60")}
+      className={cn("group flex items-start gap-3 border-t border-rock/50 py-3 first:border-t-0", done && "opacity-70")}
     >
+      <Box
+        on={done}
+        onClick={isToday ? () => gym.toggleDone(it.exercise) : undefined}
+        locked={auto && !marked}
+        title={auto && !marked ? L("Completado: registraste todas las series", "Done: every set logged") : L("Marcar como hecho", "Mark as done")}
+      />
       <ExerciseFigure pattern={pattern} active={hover} className="h-11 w-11 shrink-0" />
       <button onClick={() => onPick(prefillFor(it))} className="min-w-0 flex-1 text-left" title={L("Registrar en el chat", "Log in chat")}>
-        <p className="flex items-center gap-2 font-semibold leading-tight">
-          {done && <Check className="h-3.5 w-3.5 text-signal" />}
-          <span className={cn("truncate", done && "line-through decoration-rock")}>{it.exercise}</span>
-        </p>
+        <p className={cn("truncate font-semibold leading-tight", done && "line-through decoration-rock")}>{it.exercise}</p>
         <p className="mt-0.5 font-mono text-xs text-muted-foreground">
           {it.sets}×{repsLabel(it)} · <span className="text-foreground">{weightLabel(it, es)}</span>
+          {isToday && todaySets > 0 && <span className="ml-1 text-signal">· {Math.min(todaySets, it.sets)}/{it.sets}</span>}
         </p>
         {it.note && <p className="mt-0.5 text-xs text-muted-foreground/80">{it.note}</p>}
-        {pr.status !== "new" && <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{L("Última", "Last")}: {pr.last}</p>}
+        {s0 && (
+          <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+            {L("Última", "Last")}: {s0.reps.join("-")}{s0.weightKg ? ` @ ${formatKg(s0.weightKg)} kg` : ""}
+          </p>
+        )}
+        {v.kind !== "new" && v.kind !== "incomplete" && (
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground" title={L(v.why.es, v.why.en)}>
+            <span className="text-foreground">{L("Meta", "Goal")}:</span> {L(v.goal.es, v.goal.en)}
+          </p>
+        )}
+        {appliedToday && (
+          <p className="mt-0.5 font-mono text-[11px] text-signal">{unitOf(it.prevWeight)} → {unitOf(it.weight)}</p>
+        )}
       </button>
-      {pr.status === "up" && (
+      {pending && (
         <motion.button
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           whileTap={{ scale: 0.92 }}
-          onClick={() => gym.setPlanWeight(it.exercise, pr.next)}
-          className="label-mono inline-flex shrink-0 items-center gap-1 rounded-full bg-signal px-2.5 py-1 text-white"
-          title={L("Completaste el tope del rango en todas las series", "You hit the top of the range on every set")}
+          onClick={() => gym.applyVerdict(it, v)}
+          className={cn("label-mono inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1",
+            v.kind === "up" ? "bg-signal text-white" : "border border-signal text-signal")}
+          title={L(v.why.es, v.why.en)}
         >
-          <ArrowUp className="h-3 w-3" /> {formatKg(pr.next)} {it.unit}
+          {v.kind === "up" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />} {v.next === null ? "—" : formatKg(v.next)} {it.unit}
         </motion.button>
       )}
     </motion.li>
   );
 }
 
-/** Checklist para días sin pesas (carrera, movilidad, core); se recuerda por fecha en este navegador */
-function BlockChecklist({ blocks, dow }: { blocks: PlanBlock[]; dow: number }) {
-  const key = `gym-check:${todayKey()}:${dow}`;
-  const [checked, setChecked] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(key) ?? "[]"); } catch { return []; } });
-  useEffect(() => { try { setChecked(JSON.parse(localStorage.getItem(key) ?? "[]")); } catch { setChecked([]); } }, [key]);
-  const toggle = (id: string) => {
-    const next = checked.includes(id) ? checked.filter((c) => c !== id) : [...checked, id];
-    setChecked(next);
-    localStorage.setItem(key, JSON.stringify(next));
-  };
+/** Checklist de bloques (carrera, movilidad, core). Solo se marca el día de hoy; se guarda en tu cuenta. */
+function BlockChecklist({ blocks, gym, isToday }: { blocks: PlanBlock[]; gym: GymApi; isToday: boolean }) {
+  const checked = isToday ? gym.dayRow()?.done ?? [] : [];
   return (
     <div className="space-y-4">
       {blocks.map((b) => (
@@ -82,13 +125,9 @@ function BlockChecklist({ blocks, dow }: { blocks: PlanBlock[]; dow: number }) {
               const id = `${b.title}/${line}`;
               const on = checked.includes(id);
               return (
-                <li key={line}>
-                  <button onClick={() => toggle(id)} className="flex w-full items-start gap-2 text-left text-sm">
-                    <span className={cn("mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-sm border transition-colors", on ? "border-signal bg-signal text-white" : "border-rock")}>
-                      {on && <Check className="h-3 w-3" />}
-                    </span>
-                    <span className={cn("transition-colors", on && "text-muted-foreground line-through")}>{line}</span>
-                  </button>
+                <li key={line} className="flex items-start gap-2 text-sm">
+                  <Box on={on} onClick={isToday ? () => gym.toggleDone(id) : undefined} />
+                  <span className={cn("transition-colors", on && "text-muted-foreground line-through")}>{line}</span>
                 </li>
               );
             })}
@@ -99,14 +138,68 @@ function BlockChecklist({ blocks, dow }: { blocks: PlanBlock[]; dow: number }) {
   );
 }
 
+/** Marcador general: "Rutina completa" con resumen del día */
+function CompleteBar({ gym }: { gym: GymApi }) {
+  const { L, locale } = useLang();
+  const s = gym.todaySummary(gym.logs);
+  const done = s.items.filter((i) => i.done).length + s.blocksDone;
+  const total = s.items.length + s.blocksTotal;
+  const row = gym.dayRow();
+  const at = row?.completedAt ? new Date(row.completedAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "";
+  const changes = s.items.filter(({ it }) => it.progressedOn === s.day && it.prevWeight !== undefined && it.weight !== it.prevWeight);
+
+  return (
+    <div className="border-t border-rock/70 px-4 py-3">
+      <AnimatePresence mode="wait" initial={false}>
+        {s.completed ? (
+          <motion.div key="done" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3, ease: easeOutExpo }} className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="flex items-center gap-2 font-semibold">
+                <motion.span initial={{ scale: 0 }} animate={{ scale: [0, 1.3, 1] }} transition={{ duration: 0.5 }} className="grid h-6 w-6 place-items-center rounded-full bg-signal text-white">
+                  <Check className="h-3.5 w-3.5" />
+                </motion.span>
+                {L("Rutina completa", "Workout complete")}
+                {at && <span className="label-mono text-muted-foreground">{at}</span>}
+              </p>
+              <button onClick={() => gym.setCompleted(false)} className="label-mono inline-flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground">
+                <Undo2 className="h-3 w-3" /> {L("Desmarcar", "Unmark")}
+              </button>
+            </div>
+            <p className="font-mono text-xs text-muted-foreground">
+              {total > 0 && <>{done}/{total} · </>}{s.sets} {L("series", "sets")} · {Math.round(s.volume).toLocaleString(locale)} kg
+            </p>
+            {changes.length > 0 && (
+              <p className="font-mono text-[11px] text-signal">
+                {changes.map(({ it }) => `${it.exercise} → ${it.weight === null ? "—" : formatKg(it.weight)} ${it.unit}`).join(" · ")}
+              </p>
+            )}
+          </motion.div>
+        ) : (
+          <motion.button
+            key="todo"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3, ease: easeOutExpo }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => gym.setCompleted(true)}
+            className={cn("label-mono flex w-full items-center justify-center gap-2 rounded-full py-2.5 transition-colors",
+              total > 0 && done >= total ? "bg-signal text-white" : "border border-foreground hover:bg-foreground hover:text-background")}
+          >
+            <Check className="h-3.5 w-3.5" /> {L("Marcar rutina completa", "Mark workout complete")}
+            {total > 0 && <span className="opacity-70">· {done}/{total}</span>}
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function PlanToday({ gym, onPick, onCreate }: { gym: GymApi; onPick: (t: string) => void; onCreate: () => void }) {
   const { L } = useLang();
   const today = isoDow();
   const [dow, setDow] = useState(today);
   const day = gym.plan?.days.find((d) => d.dow === dow);
 
-  const loggedToday = new Set(gym.logs.filter((l) => new Date(l.date).toLocaleDateString("sv-SE") === todayKey()).map((l) => normalize(l.exercise)));
-  const doneCount = day?.items.filter((i) => loggedToday.has(normalize(i.exercise))).length ?? 0;
+  const summary = gym.todaySummary(gym.logs);
+  const doneCount = summary.items.filter((i) => i.done).length;
 
   if (!gym.plan) {
     return (
@@ -123,6 +216,7 @@ export default function PlanToday({ gym, onPick, onCreate }: { gym: GymApi; onPi
       <div className="flex items-center justify-between gap-2 border-b border-rock/70 px-3 py-2">
         {DOW_SHORT.map(([es, en], i) => {
           const d = i + 1;
+          const completed = !!gym.dayRow(dateOfDow(d))?.completedAt;
           return (
             <button
               key={d}
@@ -131,7 +225,11 @@ export default function PlanToday({ gym, onPick, onCreate }: { gym: GymApi; onPi
             >
               {dow === d && <motion.span layoutId="plan-dow" className="absolute inset-0 rounded-full bg-foreground" transition={{ type: "spring", stiffness: 380, damping: 30 }} />}
               <span className="relative">{L(es, en)}</span>
-              {d === today && dow !== d && <span className="absolute -bottom-0.5 h-1 w-1 rounded-full bg-signal" />}
+              {completed ? (
+                <span className="absolute -right-0.5 -top-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-signal text-white" title={L("Rutina completa", "Workout complete")}>
+                  <Check className="h-2.5 w-2.5" />
+                </span>
+              ) : d === today && dow !== d && <span className="absolute -bottom-0.5 h-1 w-1 rounded-full bg-signal" />}
             </button>
           );
         })}
@@ -154,13 +252,14 @@ export default function PlanToday({ gym, onPick, onCreate }: { gym: GymApi; onPi
           {day?.items.length ? (
             <ul className="mt-3">
               {day.items.map((it) => (
-                <PlanRow key={it.exercise} it={it} gym={gym} onPick={onPick} done={dow === today && loggedToday.has(normalize(it.exercise))} />
+                <PlanRow key={it.exercise} it={it} gym={gym} onPick={onPick} isToday={dow === today} />
               ))}
             </ul>
           ) : null}
-          {day?.blocks?.length ? <div className="mt-4"><BlockChecklist blocks={day.blocks} dow={dow} /></div> : null}
+          {day?.blocks?.length ? <div className="mt-4"><BlockChecklist blocks={day.blocks} gym={gym} isToday={dow === today} /></div> : null}
         </motion.div>
       </AnimatePresence>
+      {dow === today && <CompleteBar gym={gym} />}
     </div>
   );
 }
