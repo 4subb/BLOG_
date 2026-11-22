@@ -6,6 +6,8 @@ import { z } from 'zod';
 import spotifyRouter from './spotify';
 import f1Router from './f1';
 import newsRouter from './news';
+import { tennisFeed } from './tennis';
+import { cyclingFeed } from './cycling';
 import { catchAsyncErrors } from './asyncErrors';
 import { extractInlineImages, extractImageUrl, toPostSummary } from './postContent';
 import { lookupIp } from './geo';
@@ -146,6 +148,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // --- F1 en vivo (Jolpica) ---
   app.use('/api/f1', f1Router);
   app.use('/api/sports/news', newsRouter);
+
+  // Temporada de tenis (en vivo, ESPN) y ciclismo (curada + panel). Caché en el servidor por fuente.
+  app.get('/api/season/:sport', async (req, res) => {
+    try {
+      if (req.params.sport === 'tenis') {
+        const feed = await tennisFeed();
+        res.set('Cache-Control', `public, max-age=${feed.matches.some((m) => m.state === 'in') ? 30 : 300}`);
+        return res.json(feed);
+      }
+      if (req.params.sport === 'ciclismo') {
+        res.set('Cache-Control', 'public, max-age=600');
+        return res.json(await cyclingFeed());
+      }
+      res.status(404).json({ message: 'Deporte desconocido' });
+    } catch (err) {
+      console.error('[season] Error:', err);
+      res.status(502).json({ message: 'No se pudo cargar la temporada' });
+    }
+  });
 
   // --- Admin Blog ---
   app.get('/api/posts/admin', isAdmin, async (req, res) => { res.json((await storage.getPostsAdmin()).map((p) => toPostSummary(p))); });

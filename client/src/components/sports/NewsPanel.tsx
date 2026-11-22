@@ -46,6 +46,7 @@ export default function NewsPanel({ sport, recaps = [] }: { sport: SportKey; rec
   const { data: news, isLoading, isError } = useQuery<NewsItem[]>({
     queryKey: [`/api/sports/news/${sport}`],
     staleTime: 10 * 60 * 1000,
+    refetchInterval: 15 * 60 * 1000,
     retry: 1,
   });
   const { L, pick } = useLang();

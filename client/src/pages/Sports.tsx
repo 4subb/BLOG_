@@ -7,7 +7,7 @@ import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import SportsHero, { SPORTS } from "@/components/sports/SportsHero";
 import HistoryPanel from "@/components/sports/HistoryPanel";
 import NewsPanel from "@/components/sports/NewsPanel";
-import ManualSeason from "@/components/sports/ManualSeason";
+import SeasonPanel from "@/components/sports/SeasonPanel";
 import F1Season, { f1LiveFacts, f1Recaps } from "@/components/sports/f1/F1Season";
 import { teamColor } from "@/components/sports/f1/teams";
 import type { SportKey } from "@/components/sports/media";
@@ -120,7 +120,7 @@ export default function Sports() {
               className="mb-12"
             />
 
-            {tab === "temporada" && (sport === "f1" ? <F1Season onGoNews={() => selectTab("noticias")} /> : <ManualSeason sport={sport} />)}
+            {tab === "temporada" && (sport === "f1" ? <F1Season onGoNews={() => selectTab("noticias")} /> : <SeasonPanel sport={sport} />)}
 
             {tab === "historia" && <HistoryPanel sport={sport} live={sport === "f1" && f1 ? f1LiveFacts(f1) : []} />}
 

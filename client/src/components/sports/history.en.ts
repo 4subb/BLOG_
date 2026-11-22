@@ -91,6 +91,11 @@ export const HISTORY_EN: Record<SportKey, SportHistory> = {
         body: "Isaac del Toro, from Ensenada, Baja California, wears the Giro d'Italia's maglia rosa for much of the race and finishes second at just 21.",
         why: "The best result by a Mexican in a Grand Tour.",
       },
+      {
+        year: "2026", tag: "México", title: "Del Toro on the Paris podium",
+        body: "In his first Tour de France, Isaac del Toro finishes third behind Pogačar and Evenepoel, wins a stage and takes the white jersey for best young rider. He sealed the podium with an attack on the Col de la Sarenne.",
+        why: "Mexico's first Tour podium; the previous best was Raúl Alcalá's 8th place.",
+      },
     ],
     trivia: [
       { q: "What does the winner of Paris–Roubaix receive?", a: "A cobblestone. The race crosses about 30 sectors of pavé and the trophy is a stone from those roads." },
@@ -106,7 +111,7 @@ export const HISTORY_EN: Record<SportKey, SportHistory> = {
   },
 
   tenis: {
-    intro: "From the lawns of Wimbledon in 1877 to the Sinner and Alcaraz era.",
+    intro: "From the lawns of Wimbledon in 1877 to the era of Alcaraz, Sinner and Zverev.",
     moments: [
       {
         year: "1877", tag: "Origen", title: "The first Wimbledon",
@@ -138,6 +143,11 @@ export const HISTORY_EN: Record<SportKey, SportHistory> = {
         body: "Jannik Sinner wins the ATP Finals at home without dropping a set, becoming the first Italian to win the season-ending championship.",
         why: "Turin became the capital of Italian tennis.",
       },
+      {
+        year: "2026", tag: "Récord", title: "Zverev, at last",
+        body: "After years as the best player without a Grand Slam, Alexander Zverev wins Roland Garros and the US Open in the same season and ends the year as world No. 1 for the first time, aged 29.",
+        why: "He was the only man with two majors in 2026; Alcaraz won Australia and Sinner, Wimbledon.",
+      },
     ],
     trivia: [
       { q: "Why does tennis count 15, 30, 40?", a: "Nobody knows for sure. The most cited theory points to a clock face in quarters (15, 30, 45) where \"45\" was shortened to 40." },
@@ -145,7 +155,7 @@ export const HISTORY_EN: Record<SportKey, SportHistory> = {
       { q: "Why does Wimbledon require all-white clothing?", a: "A 19th-century tradition: sweat showed less on white clothes, which was considered more decorous." },
     ],
     records: [
-      { value: 24, label: "Grand Slams (men's record as of 2023)", who: "Novak Djokovic" },
+      { value: 24, label: "Grand Slams, men's record", who: "Novak Djokovic" },
       { value: 70, suffix: "–68", label: "Longest set", who: "Isner vs Mahut, 2010" },
       { value: 1988, label: "Only Golden Slam", who: "Steffi Graf" },
       { value: 1877, label: "First Wimbledon", who: "Spencer Gore" },

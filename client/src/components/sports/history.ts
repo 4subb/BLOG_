@@ -92,6 +92,11 @@ export const HISTORY: Record<SportKey, SportHistory> = {
         body: "Isaac del Toro, de Ensenada, Baja California, viste la maglia rosa del Giro de Italia durante buena parte de la carrera y termina segundo con solo 21 años.",
         why: "El mejor resultado de un mexicano en una gran vuelta.",
       },
+      {
+        year: "2026", tag: "México", title: "Del Toro, al podio de París",
+        body: "En su primer Tour de Francia, Isaac del Toro termina tercero detrás de Pogačar y Evenepoel, gana una etapa y se lleva el maillot blanco al mejor joven. Sentenció el podio con un ataque en el Col de la Sarenne.",
+        why: "Es el primer podio de un mexicano en el Tour; el mejor resultado previo era el 8.º de Raúl Alcalá.",
+      },
     ],
     trivia: [
       { q: "¿Qué recibe el ganador de la París-Roubaix?", a: "Un adoquín. La carrera cruza unos 30 tramos de pavés y el trofeo es una piedra de esos caminos." },
@@ -107,7 +112,7 @@ export const HISTORY: Record<SportKey, SportHistory> = {
   },
 
   tenis: {
-    intro: "De los jardines de Wimbledon en 1877 a la era de Sinner y Alcaraz.",
+    intro: "De los jardines de Wimbledon en 1877 a la era de Alcaraz, Sinner y Zverev.",
     moments: [
       {
         year: "1877", tag: "Origen", title: "Primer Wimbledon",
@@ -139,6 +144,11 @@ export const HISTORY: Record<SportKey, SportHistory> = {
         body: "Jannik Sinner gana las ATP Finals en casa sin ceder un solo set, y se convierte en el primer italiano campeón del torneo de maestros.",
         why: "Turín pasó a ser la capital del tenis italiano.",
       },
+      {
+        year: "2026", tag: "Récord", title: "Zverev, por fin",
+        body: "Tras años como el mejor jugador sin un Grand Slam, Alexander Zverev gana Roland Garros y el US Open en la misma temporada y termina el año como número 1 del mundo por primera vez, a los 29 años.",
+        why: "Fue el único hombre con dos grandes en 2026; Alcaraz ganó Australia y Sinner, Wimbledon.",
+      },
     ],
     trivia: [
       { q: "¿Por qué en tenis se cuenta 15, 30, 40?", a: "Nadie lo sabe con certeza. La teoría más citada habla de un reloj con cuartos (15, 30, 45) en el que «45» se acortó a 40." },
@@ -146,7 +156,7 @@ export const HISTORY: Record<SportKey, SportHistory> = {
       { q: "¿Por qué Wimbledon exige vestir de blanco?", a: "Tradición del siglo XIX: el sudor se notaba menos en ropa blanca, lo que se consideraba más decoroso." },
     ],
     records: [
-      { value: 24, label: "Grand Slams (récord masculino al 2023)", who: "Novak Djokovic" },
+      { value: 24, label: "Grand Slams, récord masculino", who: "Novak Djokovic" },
       { value: 70, suffix: "–68", label: "Set más largo", who: "Isner vs Mahut, 2010" },
       { value: 1988, label: "Único Golden Slam", who: "Steffi Graf" },
       { value: 1877, label: "Primer Wimbledon", who: "Spencer Gore" },
