@@ -15,7 +15,7 @@ const MAX_RACE_POINTS = 25;
 const MAX_SPRINT_POINTS = 8;
 
 async function getJson(path: string): Promise<any> {
-  const res = await fetch(`${BASE}${path}`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(10_000) });
+  const res = await fetch(`${BASE}${path}`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20_000) });
   if (!res.ok) throw new Error(`Jolpica ${path} → ${res.status}`);
   return (await res.json()).MRData;
 }
@@ -45,7 +45,10 @@ async function loadSeason(): Promise<F1Season> {
   ]);
 
   const standings = driversData.StandingsTable.StandingsLists[0];
-  const round = Number(standings?.round ?? 0);
+  // La ronda completada sale de los últimos RESULTADOS, no de la clasificación: Jolpica a veces
+  // adelanta la ronda de la clasificación antes de correrse la carrera (pasó con Las Vegas 2026).
+  const lastRound = Number(lastData.RaceTable.Races[0]?.round ?? 0);
+  const round = lastRound || Number(standings?.round ?? 0);
   const drivers: F1Driver[] = (standings?.DriverStandings ?? []).map((d: any) => ({
     position: Number(d.position), points: Number(d.points), wins: Number(d.wins),
     id: d.Driver.driverId, code: d.Driver.code, number: d.Driver.permanentNumber,
