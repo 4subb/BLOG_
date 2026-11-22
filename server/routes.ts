@@ -19,6 +19,7 @@ import {
   insertGymExerciseSchema,
   gymPlanSchema,
   gymDaySchema,
+  gymPrefsSchema,
   insertVisitedPlaceSchema, 
   insertBucketListSchema
 } from '@shared/schema'; 
@@ -310,6 +311,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const val = gymDaySchema.safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
     res.json(await storage.saveGymDay(req.session.userId, req.params.day, val.data.done, val.data.completed));
+  });
+
+  app.get('/api/gym/prefs', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    res.json(await storage.getGymPrefs(req.session.userId));
+  });
+
+  app.put('/api/gym/prefs', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    const val = gymPrefsSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    res.json(await storage.saveGymPrefs(req.session.userId, val.data));
   });
 
   app.get('/api/gym/plan', async (req, res) => {

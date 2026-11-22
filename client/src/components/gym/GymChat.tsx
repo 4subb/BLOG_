@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, ArrowUp, Check, Equal, Plus, Undo2 } from "lucide-react";
 import type { GymLog } from "@shared/schema";
 import {
-  EXERCISE_LIBRARY, MUSCLE_GROUPS, MUSCLE_LABELS, estimate1RM, formatKg, isoDow, parseWorkoutMessage, planWeightKg, todayKey,
+  EQUIPMENT_LABELS, EXERCISE_LIBRARY, MUSCLE_GROUPS, MUSCLE_LABELS, estimate1RM, findInLibrary, formatKg, fromKg, isoDow, normalize,
+  parseWorkoutMessage, planWeightKg, todayKey, toKgFrom, variantsFor,
   type HistoryItem, type MovementPattern, type MuscleGroup, type ParsedEntry, type Verdict,
 } from "@shared/gym";
 import { useLang } from "@/lib/lang";
@@ -15,7 +16,9 @@ import type { GymApi, PlanChange } from "./useGym";
 // Chat de registro: el usuario escribe como hablaría ("banca 80 3x10 y sentadilla 100 5x5"),
 // shared/gym.ts lo interpreta en local (sin IA externa) y se guarda al instante con opción de deshacer.
 
-type Saved = { id: string; exercise: string; weight: number; sets: number; reps: number; pr: boolean; assumed: ParsedEntry["assumed"] };
+type Saved = { id: string; exercise: string; weight: number; sets: number; reps: number; pr: boolean; assumed: ParsedEntry["assumed"]; variantOf?: string | null };
+/** Alternativas ofrecidas en el chat: al tocarlas se precarga el mensaje */
+type Variants = { of: string; options: { name: string; sub: string; prefill: string }[] };
 /** Respuesta del entrenador tras registrar: progreso de la sesión o veredicto con el cambio de peso */
 type Coach = {
   exercise: string; kind: Verdict["kind"]; goal: string; why: string; tip?: string;
@@ -25,9 +28,10 @@ type Summary = { title: string; done: number; total: number; sets: number; volum
 type BotMsg = Extract<Msg, { role: "bot" }>;
 type Msg =
   | { id: string; role: "user"; text: string }
-  | { id: string; role: "bot"; text: string; saved?: Saved[]; dayOffset?: number; undone?: boolean; coach?: Coach[]; summary?: Summary;
+  | { id: string; role: "bot"; text: string; saved?: Saved[]; dayOffset?: number; undone?: boolean; coach?: Coach[]; summary?: Summary; notes?: string[]; variants?: Variants;
       /** Ejercicio desconocido pendiente de añadir al catálogo */
       unknown?: { name: string; entries: ParsedEntry[]; dayOffset: number; resolved?: boolean } };
+type Unit = GymApi["unit"];
 
 const DEFAULT_PATTERN: Record<MuscleGroup, MovementPattern> = {
   pecho: "press", espalda: "row", piernas: "squat", hombros: "raise", brazos: "curl", core: "core",
@@ -86,22 +90,23 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
     const prevBest = new Map(entries.map((e) => [e.exercise, gym.statsFor(e.exercise)?.best ?? 0]));
     const rows: GymLog[] = await gym.logBatch.mutateAsync({
       date: dayOffset ? date : undefined,
-      entries: entries.map((e) => ({ exercise: e.exercise, weight: e.weight!, sets: e.sets!, reps: e.reps! })),
+      entries: entries.map((e) => ({ exercise: e.exercise, weight: e.weight!, sets: e.sets!, reps: e.reps!, variantOf: e.variantOf ?? null })),
     });
     return rows.map((r, i) => {
       const best = prevBest.get(r.exercise) ?? 0;
       const pr = r.weight > 0 && r.weight > best && (gym.statsFor(r.exercise)?.sessions ?? 0) > 0;
       if (pr) prevBest.set(r.exercise, r.weight);
-      return { id: r.id, exercise: r.exercise, weight: r.weight, sets: r.sets, reps: r.reps, pr, assumed: entries[i]?.assumed ?? [] };
+      return { id: r.id, exercise: r.exercise, weight: r.weight, sets: r.sets, reps: r.reps, pr, assumed: entries[i]?.assumed ?? [], variantOf: r.variantOf };
     });
   }
 
   /** Ejercicio en curso: el último registrado hoy, si no se marcó como terminado */
-  const currentExercise = () => {
+  const lastToday = () => {
     const last = gym.freshLogs().find((l) => todayKey(new Date(l.date)) === todayKey());
-    if (!last || gym.dayRow()?.done.includes(last.exercise)) return null;
-    return last.exercise;
+    if (!last || gym.dayRow()?.done.includes(last.exercise) || (last.variantOf && gym.dayRow()?.done.includes(last.variantOf))) return null;
+    return last;
   };
+  const currentExercise = () => lastToday()?.exercise ?? null;
 
   const coachLine = (it: NonNullable<ReturnType<GymApi["planItem"]>>, v: Verdict, change: PlanChange | null): Coach => ({
     exercise: it.exercise, kind: v.kind, goal: L(v.goal.es, v.goal.en), why: L(v.why.es, v.why.en),
@@ -134,7 +139,35 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
   }
 
   const describe = (e: { exercise: string; weight: number | null; sets: number | null; reps: number | null }) =>
-    `${e.exercise} ${e.sets ?? "?"}×${e.reps ?? "?"}${e.weight ? ` @ ${formatKg(e.weight)} kg` : ""}`;
+    `${e.exercise} ${e.sets ?? "?"}×${e.reps ?? "?"}${e.weight ? ` @ ${gym.w(e.weight)}` : ""}`;
+  const vol = (kg: number) => `${Math.round(fromKg(kg, gym.unit)).toLocaleString(locale)} ${gym.unit}`;
+
+  /** Notas para registros que son variante: cuentan para el ejercicio de la rutina, sin tocar su progresión */
+  const variantNotes = (saved: Saved[]) => {
+    const sum = gym.todaySummary();
+    return Array.from(new Set(saved.filter((x) => x.variantOf).map((x) => x.variantOf!))).map((orig) => {
+      const item = sum.items.find((i) => normalize(i.it.exercise) === normalize(orig));
+      const prog = item ? ` (${Math.min(item.sets, item.it.sets)}/${item.it.sets} ${L("series", "sets")})` : "";
+      return L(
+        `↔ Variante de ${orig}: cuenta para tu rutina de hoy${prog}. El peso de ${orig} no cambia.`,
+        `↔ Variant of ${orig}: counts toward today's routine${prog}. ${orig}'s weight stays the same.`);
+    });
+  };
+
+  /** Alternativas para un ejercicio, con peso de partida en la unidad del usuario */
+  function variantOptions(of: string): Variants {
+    const it = gym.planItem(of);
+    const lastKg = gym.statsFor(of)?.last?.weight ?? (it ? planWeightKg(it) : null);
+    const sets = it?.sets ?? 3;
+    const opts = variantsFor(of, gym.exercises, lastKg).slice(0, 6).map((o) => {
+      const start = o.startKg ? `${formatKg(fromKg(o.startKg, gym.unit) >= 20 ? Math.round(fromKg(o.startKg, gym.unit)) : fromKg(o.startKg, gym.unit))} ${gym.unit}` : null;
+      const eq = o.equipment ? L(EQUIPMENT_LABELS[o.equipment].es, EQUIPMENT_LABELS[o.equipment].en) : "";
+      const sub = [eq, start ? `≈ ${start}${o.perHand ? L(" por mano", " per hand") : ""}` : o.bodyweight ? L("peso corporal", "bodyweight") : ""].filter(Boolean).join(" · ");
+      const num = start ? `${start.replace(" ", "")} ` : "";
+      return { name: o.name, sub, prefill: `${o.name.toLowerCase()} ${num}${sets}x en vez de ${of.toLowerCase()}` };
+    });
+    return { of, options: opts };
+  }
 
   async function handle(raw: string) {
     const input = raw.trim();
@@ -145,13 +178,18 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
     const fromPlan: HistoryItem[] = (gym.plan?.days ?? []).flatMap((d) => d.items)
       .filter((i) => i.reps !== "max" && i.weight !== null)
       .map((i) => ({ exercise: i.exercise, weight: planWeightKg(i)!, sets: i.sets, reps: (i.reps as [number, number])[0], date: new Date(0) }));
-    const r = parseWorkoutMessage(input, catalog(), [...gym.freshLogs(), ...fromPlan], currentExercise());
+    const ctxLog = lastToday();
+    const r = parseWorkoutMessage(input, catalog(), [...gym.freshLogs(), ...fromPlan], ctxLog?.exercise ?? null, gym.unit);
+    // Serie a serie de una variante en curso: hereda a qué ejercicio sustituye
+    if (r.intent === "log" && ctxLog?.variantOf) {
+      for (const e of r.entries) if (!e.variantOf && e.exercise === ctxLog.exercise) e.variantOf = ctxLog.variantOf;
+    }
 
     try {
       if (r.intent === "help") {
         push({ id: uid(), role: "bot", text: L(
-          "Escríbeme como lo dirías: «banca 80kg 3x10», «sentadilla 100 5x5 y peso muerto 140x3», «banca 60x10, 70x8, 80x6» (una serie por peso), «ayer dominadas 4x8», «militar 3 series de 8 con 42,5kg». Serie a serie: «dominadas primera serie 10», luego «segunda serie 8», «7»… (sigo con el mismo ejercicio). Al completar las series te digo si toca subir, mantener o descargar, y ajusto tu rutina. «remo listo» marca un ejercicio; «terminé» cierra la rutina del día. También: «récord en banca» o «deshacer».",
-          "Write it like you'd say it: \"bench 80kg 3x10\", \"squat 100 5x5 and deadlift 140x3\", \"bench 60x10, 70x8, 80x6\" (one set per weight), \"ayer pull ups 4x8\". If you skip the weight or sets I reuse your last session. Set by set: \"pull ups first set 10\", then \"second set 8\", \"7\"… When all sets are in I tell you whether to go up, hold or deload, and update your routine. \"row done\" ticks an exercise; \"finished\" closes the day. Also: \"pr bench\" or \"undo\".") });
+          "Escríbeme como lo dirías: «banca 80kg 3x10», «sentadilla 100 5x5 y peso muerto 140x3», «banca 60x10, 70x8, 80x6» (una serie por peso), «ayer dominadas 4x8», «militar 3 series de 8 con 42,5kg». Serie a serie: «dominadas primera serie 10», luego «segunda serie 8», «7»… (sigo con el mismo ejercicio). Al completar las series te digo si toca subir, mantener o descargar, y ajusto tu rutina. «remo listo» marca un ejercicio; «terminé» cierra la rutina del día. Variantes: «press mancuernas 26 3x10 en vez de banca» (cuenta para banca sin cambiar su peso); «alternativas a banca» o «máquina ocupada» te da opciones. Unidades: «135 lb 3x8» o, sin unidad, la que elijas arriba (kg/lb); «135 lb a kg» convierte. Entiendo abreviaturas y erratas: lib, rep, ser, sent, domi… También: «récord en banca» o «deshacer».",
+          "Write it like you'd say it: \"bench 80kg 3x10\", \"squat 100 5x5 and deadlift 140x3\", \"bench 60x10, 70x8, 80x6\" (one set per weight), \"ayer pull ups 4x8\". If you skip the weight or sets I reuse your last session. Set by set: \"pull ups first set 10\", then \"second set 8\", \"7\"… When all sets are in I tell you whether to go up, hold or deload, and update your routine. \"row done\" ticks an exercise; \"finished\" closes the day. Variants: \"dumbbell press 26 3x10 en vez de bench\" (counts for bench, keeps its weight); \"alternatives to bench\" or \"machine busy\" suggests options. Units: \"135 lb 3x8\" or, without a unit, the one picked above (kg/lb); \"135 lb to kg\" converts. Typos and short forms are fine. Also: \"pr bench\" or \"undo\".") });
         return;
       }
 
@@ -169,8 +207,30 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
         if (!s) { push({ id: uid(), role: "bot", text: L(`Aún no tienes registros de ${r.exercise}.`, `No ${r.exercise} entries yet.`) }); return; }
         const lastDate = s.last ? new Date(s.last.date).toLocaleDateString(locale, { day: "numeric", month: "short" }) : "";
         push({ id: uid(), role: "bot", text: L(
-          `${r.exercise}: récord ${formatKg(s.best)} kg · 1RM estimado ${Math.round(s.best1RM)} kg · ${s.sessions} sesión(es). Última: ${s.last ? describe(s.last) : "—"} (${lastDate}).`,
-          `${r.exercise}: best ${formatKg(s.best)} kg · est. 1RM ${Math.round(s.best1RM)} kg · ${s.sessions} session(s). Last: ${s.last ? describe(s.last) : "—"} (${lastDate}).`) });
+          `${r.exercise}: récord ${gym.w(s.best)} · 1RM estimado ${vol(s.best1RM)} · ${s.sessions} sesión(es). Última: ${s.last ? describe(s.last) : "—"} (${lastDate}).`,
+          `${r.exercise}: best ${gym.w(s.best)} · est. 1RM ${vol(s.best1RM)} · ${s.sessions} session(s). Last: ${s.last ? describe(s.last) : "—"} (${lastDate}).`) });
+        return;
+      }
+
+      if (r.intent === "convert") {
+        const kg = toKgFrom(r.value, r.from);
+        const out = r.to === "lb" ? kg / 0.45359237 : kg;
+        const fmt = (n: number) => n.toLocaleString(locale, { maximumFractionDigits: 1 });
+        const plates = r.to === "lb" ? ` · ${L("cargable", "loadable")}: ${formatKg(Math.round(out / 2.5) * 2.5)} lb` : ` · ${L("cargable", "loadable")}: ${formatKg(Math.round(out / 1.25) * 1.25)} kg`;
+        push({ id: uid(), role: "bot", text: `${fmt(r.value)} ${r.from} = ${fmt(out)} ${r.to}${plates}` });
+        return;
+      }
+
+      if (r.intent === "variants") {
+        if (!r.exercise) {
+          push({ id: uid(), role: "bot", text: L("¿Para qué ejercicio? Ej.: «alternativas a banca».", "For which exercise? e.g. \"alternatives to bench\".") });
+          return;
+        }
+        const v = variantOptions(r.exercise);
+        push({ id: uid(), role: "bot", variants: v.options.length ? v : undefined, text: v.options.length
+          ? L(`Opciones para ${r.exercise} (mismo movimiento). Toca una y ajusta el peso; cuenta para tu rutina sin cambiar el peso de ${r.exercise}. El peso es orientativo: empieza ahí y deja 2 reps en reserva.`,
+              `Options for ${r.exercise} (same movement). Tap one and adjust the weight; it counts for your routine without changing ${r.exercise}'s weight. Weights are a rough start: leave 2 reps in reserve.`)
+          : L(`No tengo alternativas guardadas para ${r.exercise}.`, `I have no alternatives saved for ${r.exercise}.`) });
         return;
       }
 
@@ -197,6 +257,14 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
       }
 
       // intent: log
+      if (r.unknownName && r.variantOf && r.entries.length + r.incomplete.length) {
+        const orig = gym.exercises.find((e) => e.name === r.variantOf) ?? findInLibrary(r.variantOf);
+        if (orig) {
+          await gym.addExercise.mutateAsync({ name: r.unknownName, muscleGroup: orig.muscleGroup as MuscleGroup, pattern: orig.pattern as MovementPattern, aliases: [], bodyweight: false });
+          push({ id: uid(), role: "bot", text: L(`Añadí «${r.unknownName}» a tu catálogo como variante de ${r.variantOf}.`, `Added "${r.unknownName}" to your catalog as a ${r.variantOf} variant.`) });
+          r.unknownName = null;
+        }
+      }
       if (r.unknownName && r.entries.length + r.incomplete.length) {
         push({ id: uid(), role: "bot",
           text: L(`«${r.unknownName}» no está en tu catálogo. ¿De qué grupo muscular es? Lo añado y lo registro.`,
@@ -213,8 +281,8 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
       if (r.entries.length) {
         const saved = await save(r.entries, r.dayOffset);
         const when = r.dayOffset === -1 ? L(" (ayer)", " (yesterday)") : r.dayOffset === -2 ? L(" (anteayer)", " (2 days ago)") : "";
-        const coach = coachAfter(saved.map((x) => x.exercise));
-        replies.push({ id: uid(), role: "bot", text: L(`Registrado${when}:`, `Logged${when}:`), saved, dayOffset: r.dayOffset, coach });
+        const coach = coachAfter(saved.filter((x) => !x.variantOf).map((x) => x.exercise));
+        replies.push({ id: uid(), role: "bot", text: L(`Registrado${when}:`, `Logged${when}:`), saved, dayOffset: r.dayOffset, coach, notes: variantNotes(saved) });
       }
       if (r.incomplete.length) {
         replies.push({ id: uid(), role: "bot", text: L(
@@ -254,7 +322,7 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
       patch(msg.id, (m) => ({ ...m, unknown: { ...u, resolved: true } }) as Msg);
       if (u.entries.length) {
         const saved = await save(u.entries, u.dayOffset);
-        push({ id: uid(), role: "bot", text: L(`Añadido a ${MUSCLE_LABELS[group].es} y registrado:`, `Added to ${MUSCLE_LABELS[group].en} and logged:`), saved, coach: coachAfter(saved.map((x) => x.exercise)) });
+        push({ id: uid(), role: "bot", text: L(`Añadido a ${MUSCLE_LABELS[group].es} y registrado:`, `Added to ${MUSCLE_LABELS[group].en} and logged:`), saved, coach: coachAfter(saved.filter((x) => !x.variantOf).map((x) => x.exercise)), notes: variantNotes(saved) });
       } else {
         push({ id: uid(), role: "bot", text: L(`Añadí «${u.name}». Ahora dime series×reps y peso.`, `Added "${u.name}". Now tell me sets×reps and weight.`) });
       }
@@ -272,11 +340,14 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
     <div className="flex h-[560px] flex-col border border-rock/70 bg-background">
       <div className="flex items-center justify-between border-b border-rock/70 px-4 py-3">
         <p className="label-mono flex items-center gap-2"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-signal" />{L("Bitácora · chat", "Log · chat")}</p>
-        {msgs.length > 0 && (
-          <button className="label-mono text-muted-foreground transition-colors hover:text-foreground" onClick={() => setMsgs([])}>
-            {L("Limpiar", "Clear")}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <UnitSwitch unit={gym.unit} onChange={gym.setUnit} />
+          {msgs.length > 0 && (
+            <button className="label-mono text-muted-foreground transition-colors hover:text-foreground" onClick={() => setMsgs([])}>
+              {L("Limpiar", "Clear")}
+            </button>
+          )}
+        </div>
       </div>
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
@@ -314,8 +385,9 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
                         >
                           <span className="font-semibold text-foreground">{s.exercise}</span>
                           <span className="text-muted-foreground">{s.sets}×{s.reps}</span>
-                          <span>{s.weight ? `${formatKg(s.weight)} kg` : L("peso corporal", "bodyweight")}</span>
-                          {s.weight > 0 && s.reps > 1 && <span className="text-muted-foreground">· 1RM≈{Math.round(estimate1RM(s.weight, s.reps))}</span>}
+                          <span>{s.weight ? gym.w(s.weight) : L("peso corporal", "bodyweight")}</span>
+                          {s.weight > 0 && s.reps > 1 && <span className="text-muted-foreground">· 1RM≈{Math.round(fromKg(estimate1RM(s.weight, s.reps), gym.unit))}</span>}
+                          {s.variantOf && <span className="text-[10px] text-muted-foreground">↔ {s.variantOf}</span>}
                           {s.pr && !m.undone && (
                             <motion.span
                               initial={{ scale: 0.4, opacity: 0 }}
@@ -344,7 +416,7 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
                   {m.saved && (
                     <div className="flex items-center justify-between gap-3 border-t border-rock/50 pt-2">
                       <span className="label-mono text-muted-foreground">
-                        {L("Volumen", "Volume")} {m.saved.reduce((a, s) => a + s.weight * s.sets * s.reps, 0).toLocaleString(locale)} kg
+                        {L("Volumen", "Volume")} {vol(m.saved.reduce((a, s) => a + s.weight * s.sets * s.reps, 0))}
                       </span>
                       {!m.undone ? (
                         <button
@@ -360,7 +432,24 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
 
                   {m.coach?.map((c, i) => <CoachCard key={c.exercise} c={c} dim={!!m.undone} onRevert={() => revertCoach(m.id, i)} />)}
 
-                  {m.summary && <SummaryCard s={m.summary} />}
+                  {m.notes?.map((n) => <p key={n} className="border-t border-rock/50 pt-2 text-xs text-muted-foreground">{n}</p>)}
+
+                  {m.variants && (
+                    <div className="grid gap-1.5 border-t border-rock/50 pt-3">
+                      {m.variants.options.map((o) => (
+                        <button
+                          key={o.name}
+                          onClick={() => { setText(o.prefill); inputRef.current?.focus(); }}
+                          className="flex items-baseline justify-between gap-3 rounded-lg border border-rock/70 px-3 py-2 text-left transition-colors hover:border-signal"
+                        >
+                          <span className="font-medium">{o.name}</span>
+                          <span className="font-mono text-[11px] text-muted-foreground">{o.sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {m.summary && <SummaryCard s={m.summary} unit={gym.unit} />}
 
                   {m.unknown && !m.unknown.resolved && (
                     <div className="flex flex-wrap gap-1.5">
@@ -384,7 +473,7 @@ export default function GymChat({ gym, userId, prefill }: { gym: GymApi; userId:
 
       <div className="border-t border-rock/70 p-3">
         <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
-          {[L("ayuda", "help"), L("deshacer", "undo"), L("terminé la rutina", "finished workout"), L("récord en banca", "pr bench")].map((chip) => (
+          {[L("ayuda", "help"), L("deshacer", "undo"), ...(current ? [L("máquina ocupada", "machine busy")] : []), L("terminé la rutina", "finished workout"), L("135 lb a kg", "135 lb to kg")].map((chip) => (
             <button key={chip} onClick={() => handle(chip)} className="label-mono shrink-0 rounded-full border border-rock/70 px-3 py-1 text-muted-foreground transition-colors hover:border-foreground hover:text-foreground">
               {chip}
             </button>
@@ -462,7 +551,7 @@ function CoachCard({ c, dim, onRevert }: { c: Coach; dim: boolean; onRevert: () 
   );
 }
 
-function SummaryCard({ s }: { s: Summary }) {
+function SummaryCard({ s, unit }: { s: Summary; unit: Unit }) {
   const { L, locale } = useLang();
   return (
     <motion.div
@@ -478,7 +567,7 @@ function SummaryCard({ s }: { s: Summary }) {
         {s.total > 0 && <span className="label-mono text-signal">{s.done}/{s.total}</span>}
       </div>
       <p className="font-mono text-xs text-muted-foreground">
-        {s.sets} {L("series", "sets")} · {s.volume.toLocaleString(locale)} kg {L("de volumen", "volume")}
+        {s.sets} {L("series", "sets")} · {Math.round(fromKg(s.volume, unit)).toLocaleString(locale)} {unit} {L("de volumen", "volume")}
       </p>
       {s.changes.length > 0 && (
         <p className="font-mono text-xs"><span className="text-muted-foreground">{L("Próxima vez", "Next time")}:</span> {s.changes.join(" · ")}</p>
@@ -487,5 +576,27 @@ function SummaryCard({ s }: { s: Summary }) {
         <p className="text-xs text-muted-foreground">{L("Quedó sin hacer", "Skipped")}: {s.pending.join(", ")}</p>
       )}
     </motion.div>
+  );
+}
+
+/** Interruptor kg / lb: cambia lo que se muestra, los números sin unidad y los pesos de la rutina */
+export function UnitSwitch({ unit, onChange }: { unit: Unit; onChange: (u: Unit) => void }) {
+  const { L } = useLang();
+  return (
+    <div role="radiogroup" aria-label={L("Unidad de peso", "Weight unit")} className="relative flex rounded-full border border-rock/70 p-0.5">
+      {(["kg", "lb"] as const).map((u) => (
+        <button
+          key={u}
+          role="radio"
+          aria-checked={unit === u}
+          onClick={() => onChange(u)}
+          title={u === unit ? undefined : L(`Cambiar todo a ${u} (también tu rutina)`, `Switch everything to ${u} (routine too)`)}
+          className={cn("label-mono relative z-10 rounded-full px-2.5 py-0.5 transition-colors", unit === u ? "text-background" : "text-muted-foreground hover:text-foreground")}
+        >
+          {unit === u && <motion.span layoutId="unit-pill" className="absolute inset-0 -z-10 rounded-full bg-foreground" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
+          {u}
+        </button>
+      ))}
+    </div>
   );
 }

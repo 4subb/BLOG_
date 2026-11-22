@@ -87,6 +87,7 @@ export const gymLogs = pgTable("gym_logs", {
   sets: integer("sets").notNull(),
   reps: integer("reps").notNull(),
   notes: text("notes"),
+  variantOf: text("variant_of"), // ejercicio de la rutina al que sustituyó este día (null = el propio)
 });
 
 // Catálogo de ejercicios propio de cada usuario (empieza vacío; EXERCISE_LIBRARY en shared/gym.ts solo sugiere).
@@ -109,6 +110,12 @@ export const gymDays = pgTable("gym_days", {
   done: text("done").array().notNull().default(sql`'{}'::text[]`),
   completedAt: timestamp("completed_at"),
 }, (t) => ({ pk: unique("gym_days_user_day").on(t.userId, t.day) }));
+
+// Preferencias del gym por usuario (unidad de peso para mostrar y para números sin unidad)
+export const gymPrefs = pgTable("gym_settings", {
+  userId: varchar('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  unit: varchar("unit", { length: 2 }).notNull().default("kg"),
+});
 
 // Rutina semanal (una por usuario). JSON validado con gymPlanSchema; tipos en shared/gym.ts
 export const gymPlans = pgTable("gym_plans", {
@@ -207,6 +214,7 @@ export const gymPlanSchema = z.object({
   })).max(7),
   rules: z.array(z.string().max(300)).max(12),
 });
+export const gymPrefsSchema = z.object({ unit: z.enum(["kg", "lb"]) });
 export const gymDaySchema = z.object({
   done: z.array(z.string().min(1).max(260)).max(60),
   completed: z.boolean(),
@@ -220,6 +228,7 @@ export const insertGymLogBatchSchema = z.object({
     sets: z.number().int().min(1).max(50),
     reps: z.number().int().min(1).max(500),
     notes: z.string().max(300).nullable().optional(),
+    variantOf: z.string().trim().min(1).max(80).nullable().optional(),
   })).min(1).max(40),
 });
 
@@ -273,3 +282,4 @@ export type GymExercise = typeof gymExercises.$inferSelect;
 export type InsertGymExercise = z.infer<typeof insertGymExerciseSchema>;
 export type InsertGymLogBatch = z.infer<typeof insertGymLogBatchSchema>;
 export type GymDay = typeof gymDays.$inferSelect;
+export type GymPrefs = { unit: "kg" | "lb" };

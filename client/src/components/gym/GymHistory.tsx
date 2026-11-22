@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import type { GymLog } from "@shared/schema";
-import { formatKg } from "@shared/gym";
+import { fromKg } from "@shared/gym";
 import { useLang } from "@/lib/lang";
 import { easeOutExpo } from "@/lib/motion";
 import type { GymApi } from "./useGym";
@@ -43,7 +43,7 @@ export default function GymHistory({ gym }: { gym: GymApi }) {
               <p className="font-display text-lg font-semibold capitalize">
                 {day === dayKey(new Date()) ? L("Hoy", "Today") : new Date(`${day}T12:00`).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" })}
               </p>
-              <p className="label-mono text-muted-foreground">{volume(ls).toLocaleString(locale)} kg · {ls.reduce((a, l) => a + l.sets, 0)} {L("series", "sets")}</p>
+              <p className="label-mono text-muted-foreground">{Math.round(fromKg(volume(ls), gym.unit)).toLocaleString(locale)} {gym.unit} · {ls.reduce((a, l) => a + l.sets, 0)} {L("series", "sets")}</p>
             </div>
             <ul className="divide-y divide-rock/40">
               <AnimatePresence initial={false}>
@@ -54,9 +54,12 @@ export default function GymHistory({ gym }: { gym: GymApi }) {
                     exit={{ opacity: 0, x: 20 }}
                     className="group flex items-center justify-between gap-3 py-2 font-mono text-sm"
                   >
-                    <span className="truncate font-semibold">{l.exercise}</span>
+                    <span className="truncate font-semibold">
+                      {l.exercise}
+                      {l.variantOf && <span className="ml-2 text-[10px] font-normal text-muted-foreground">↔ {l.variantOf}</span>}
+                    </span>
                     <span className="ml-auto text-muted-foreground">{l.sets}×{l.reps}</span>
-                    <span className="w-20 text-right">{l.weight ? `${formatKg(l.weight)} kg` : "BW"}</span>
+                    <span className="w-20 text-right">{l.weight ? gym.w(l.weight) : "BW"}</span>
                     <button
                       onClick={() => gym.deleteLogs.mutate([l.id])}
                       className="text-muted-foreground opacity-0 transition-opacity hover:text-signal group-hover:opacity-100 focus:opacity-100"

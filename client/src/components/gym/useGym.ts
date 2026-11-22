@@ -1,13 +1,16 @@
 import { useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { GymDay, GymExercise, GymLog, InsertGymExercise, InsertGymLogBatch } from "@shared/schema";
-import { coach, estimate1RM, isoDow, normalize, sessionsOf, todayKey, type GymPlan, type PlanItem, type Verdict } from "@shared/gym";
+import type { GymDay, GymExercise, GymLog, GymPrefs, InsertGymExercise, InsertGymLogBatch } from "@shared/schema";
+import {
+  coach, convertWeight, estimate1RM, fmtW, isoDow, normalize, sessionsOf, todayKey, type GymPlan, type PlanItem, type Unit, type Verdict,
+} from "@shared/gym";
 
 export const LOGS_KEY = ["/api/gym/me"];
 export const EXERCISES_KEY = ["/api/gym/exercises"];
 export const PLAN_KEY = ["/api/gym/plan"];
 export const DAYS_KEY = ["/api/gym/days"];
+export const PREFS_KEY = ["/api/gym/prefs"];
 
 /** Cambio de peso aplicado por el entrenador (para poder deshacerlo) */
 export type PlanChange = { exercise: string; from: number | null; to: number | null; day: string };
@@ -28,6 +31,10 @@ export function useGym(enabled: boolean) {
   const exQ = useQuery<GymExercise[]>({ queryKey: EXERCISES_KEY, enabled });
   const planQ = useQuery<GymPlan | null>({ queryKey: PLAN_KEY, enabled });
   const daysQ = useQuery<GymDay[]>({ queryKey: DAYS_KEY, enabled });
+  const prefsQ = useQuery<GymPrefs>({ queryKey: PREFS_KEY, enabled });
+  const unit: Unit = prefsQ.data?.unit ?? "kg";
+  /** Peso guardado (kg) → texto en la unidad del usuario */
+  const w = (kg: number) => fmtW(kg, unit);
   const logs = logsQ.data ?? [];
   const exercises = exQ.data ?? [];
 
@@ -147,6 +154,30 @@ export function useGym(enabled: boolean) {
     putDay(day, row?.done ?? [], completed);
   };
 
+  const savePrefs = useMutation({
+    mutationFn: async (st: GymPrefs) => (await apiRequest("PUT", "/api/gym/prefs", st)).json() as Promise<GymPrefs>,
+    onError: () => { void queryClient.invalidateQueries({ queryKey: PREFS_KEY }); },
+  });
+  /** Cambia la unidad para todo: lo que se muestra, los números sin unidad del chat y los pesos de la rutina */
+  const setUnit = (next: Unit) => {
+    if (next === unit) return;
+    queryClient.setQueryData<GymPrefs>(PREFS_KEY, { unit: next });
+    savePrefs.mutate({ unit: next });
+    const plan = currentPlan();
+    if (!plan) return;
+    const conv = (v: number | null | undefined, from: Unit) => (v === null || v === undefined ? v : convertWeight(v, from, next));
+    commitPlan({
+      ...plan,
+      days: plan.days.map((d) => ({
+        ...d,
+        items: d.items.map((i) => (i.unit === next ? i : {
+          ...i, unit: next, weight: conv(i.weight, i.unit) as number | null,
+          ...(i.prevWeight !== undefined ? { prevWeight: conv(i.prevWeight, i.unit) as number | null } : {}),
+        })),
+      })),
+    });
+  };
+
   /** Resumen de hoy frente al plan: ejercicios hechos, series, volumen y cambios de peso */
   const todaySummary = (withLogs = freshLogs()) => {
     const day = todayKey();
@@ -155,8 +186,10 @@ export function useGym(enabled: boolean) {
     const todays = withLogs.filter((l) => todayKey(new Date(l.date)) === day);
     const items = (planDay?.items ?? []).map((it) => {
       const s = sessionsOf(it.exercise, todays)[0];
-      const sets = s?.reps.length ?? 0;
-      return { it, sets, done: marked.has(it.exercise) || sets >= it.sets, session: s };
+      const variantLogs = todays.filter((l) => "variantOf" in l && l.variantOf && normalize(l.variantOf as string) === normalize(it.exercise));
+      const variants = Array.from(new Set(variantLogs.map((l) => l.exercise)));
+      const sets = (s?.reps.length ?? 0) + variantLogs.reduce((a, l) => a + l.sets, 0);
+      return { it, sets, done: marked.has(it.exercise) || sets >= it.sets, session: s, variants };
     });
     const blockIds = (planDay?.blocks ?? []).flatMap((b) => b.lines.map((l) => `${b.title}/${l}`));
     return {
@@ -176,6 +209,7 @@ export function useGym(enabled: boolean) {
 
   return {
     logs, exercises, statsFor, plan: planQ.data ?? null, savePlan, setPlanWeight,
+    unit, w, setUnit,
     freshLogs, pattern, planItem, verdictFor, applyVerdict, revertChange,
     days, dayRow, toggleDone, setCompleted, todaySummary,
     loading: logsQ.isLoading || exQ.isLoading,

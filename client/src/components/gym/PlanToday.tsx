@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowUp, Check, Undo2 } from "lucide-react";
-import { formatKg, isoDow, repsLabel, todayKey, weightLabel, type PlanBlock, type PlanItem } from "@shared/gym";
+import { ArrowDown, ArrowLeftRight, ArrowUp, Check, Undo2 } from "lucide-react";
+import {
+  EQUIPMENT_LABELS, formatKg, fromKg, isoDow, planWeightKg, repsLabel, todayKey, variantsFor, weightLabel, type PlanBlock, type PlanItem,
+} from "@shared/gym";
 import { useLang } from "@/lib/lang";
 import { cn } from "@/lib/utils";
 import { easeOutExpo } from "@/lib/motion";
@@ -52,7 +54,11 @@ function PlanRow({ it, gym, isToday, onPick }: { it: PlanItem; gym: GymApi; isTo
   const pattern = gym.pattern(it.exercise) || "curl";
   const [hover, setHover] = useState(false);
   const s0 = v.session;
-  const todaySets = s0?.day === todayKey() ? s0.reps.length : 0;
+  // Series de hoy, contando las variantes que lo sustituyeron
+  const today = isToday ? gym.todaySummary(gym.logs).items.find((i) => i.it.exercise === it.exercise) : undefined;
+  const todaySets = today?.sets ?? 0;
+  const variants = today?.variants ?? [];
+  const [showAlt, setShowAlt] = useState(false);
   const marked = isToday && !!gym.dayRow()?.done.includes(it.exercise);
   const auto = isToday && todaySets >= it.sets;
   const done = marked || auto;
@@ -65,7 +71,7 @@ function PlanRow({ it, gym, isToday, onPick }: { it: PlanItem; gym: GymApi; isTo
       layout
       onHoverStart={() => setHover(true)}
       onHoverEnd={() => setHover(false)}
-      className={cn("group flex items-start gap-3 border-t border-rock/50 py-3 first:border-t-0", done && "opacity-70")}
+      className={cn("group flex flex-wrap items-start gap-3 border-t border-rock/50 py-3 first:border-t-0", done && "opacity-70")}
     >
       <Box
         on={done}
@@ -83,7 +89,7 @@ function PlanRow({ it, gym, isToday, onPick }: { it: PlanItem; gym: GymApi; isTo
         {it.note && <p className="mt-0.5 text-xs text-muted-foreground/80">{it.note}</p>}
         {s0 && (
           <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-            {L("Última", "Last")}: {s0.reps.join("-")}{s0.weightKg ? ` @ ${formatKg(s0.weightKg)} kg` : ""}
+            {L("Última", "Last")}: {s0.reps.join("-")}{s0.weightKg ? ` @ ${gym.w(s0.weightKg)}` : ""}
           </p>
         )}
         {v.kind !== "new" && v.kind !== "incomplete" && (
@@ -91,9 +97,20 @@ function PlanRow({ it, gym, isToday, onPick }: { it: PlanItem; gym: GymApi; isTo
             <span className="text-foreground">{L("Meta", "Goal")}:</span> {L(v.goal.es, v.goal.en)}
           </p>
         )}
+        {variants.length > 0 && (
+          <p className="mt-0.5 font-mono text-[11px] text-signal">↔ {L("Hoy", "Today")}: {variants.join(", ")}</p>
+        )}
         {appliedToday && (
           <p className="mt-0.5 font-mono text-[11px] text-signal">{unitOf(it.prevWeight)} → {unitOf(it.weight)}</p>
         )}
+      </button>
+      <button
+        onClick={() => setShowAlt((v) => !v)}
+        aria-expanded={showAlt}
+        title={L("Alternativas (otro gym, máquina ocupada…)", "Alternatives (other gym, machine busy…)")}
+        className={cn("mt-0.5 shrink-0 rounded-full p-1 transition-colors", showAlt ? "text-signal" : "text-muted-foreground hover:text-foreground")}
+      >
+        <ArrowLeftRight className="h-3.5 w-3.5" />
       </button>
       {pending && (
         <motion.button
@@ -108,7 +125,49 @@ function PlanRow({ it, gym, isToday, onPick }: { it: PlanItem; gym: GymApi; isTo
           {v.kind === "up" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />} {v.next === null ? "—" : formatKg(v.next)} {it.unit}
         </motion.button>
       )}
+      <AnimatePresence>
+        {showAlt && <Alternatives it={it} gym={gym} onPick={(t) => { onPick(t); setShowAlt(false); }} />}
+      </AnimatePresence>
     </motion.li>
+  );
+}
+
+/** Lista de variantes del mismo movimiento; al tocar una se precarga en el chat como "… en vez de X" */
+function Alternatives({ it, gym, onPick }: { it: PlanItem; gym: GymApi; onPick: (t: string) => void }) {
+  const { L } = useLang();
+  const lastKg = gym.statsFor(it.exercise)?.last?.weight ?? planWeightKg(it);
+  const opts = variantsFor(it.exercise, gym.exercises, lastKg).slice(0, 6);
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.25, ease: easeOutExpo }}
+      className="basis-full overflow-hidden"
+    >
+      {opts.length ? (
+        <ul className="ml-8 mt-1 grid gap-1">
+          {opts.map((o) => {
+            const v = o.startKg ? fromKg(o.startKg, gym.unit) : null;
+            const start = v === null ? null : `${formatKg(v >= 20 ? Math.round(v) : v)} ${gym.unit}`;
+            return (
+              <li key={o.name}>
+                <button
+                  onClick={() => onPick(`${o.name.toLowerCase()} ${start ? `${start.replace(" ", "")} ` : ""}${it.sets}x en vez de ${it.exercise.toLowerCase()}`)}
+                  className="flex w-full items-baseline justify-between gap-2 rounded border border-rock/60 px-2.5 py-1.5 text-left text-xs transition-colors hover:border-signal"
+                >
+                  <span className="font-medium">{o.name}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {o.equipment ? L(EQUIPMENT_LABELS[o.equipment].es, EQUIPMENT_LABELS[o.equipment].en) : ""}
+                    {start ? ` · ≈${start}${o.perHand ? L("/mano", "/hand") : ""}` : ""}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="ml-8 mt-1 text-xs text-muted-foreground">{L("Sin alternativas guardadas para este ejercicio.", "No alternatives saved for this exercise.")}</p>
+      )}
+    </motion.div>
   );
 }
 
@@ -166,7 +225,7 @@ function CompleteBar({ gym }: { gym: GymApi }) {
               </button>
             </div>
             <p className="font-mono text-xs text-muted-foreground">
-              {total > 0 && <>{done}/{total} · </>}{s.sets} {L("series", "sets")} · {Math.round(s.volume).toLocaleString(locale)} kg
+              {total > 0 && <>{done}/{total} · </>}{s.sets} {L("series", "sets")} · {Math.round(fromKg(s.volume, gym.unit)).toLocaleString(locale)} {gym.unit}
             </p>
             {changes.length > 0 && (
               <p className="font-mono text-[11px] text-signal">

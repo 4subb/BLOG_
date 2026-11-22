@@ -5,7 +5,7 @@ import {
   comments, type Comment, type InsertComment,
   postLikes, savedPosts,
   appRankings, appSchedule, type AppRanking, type InsertAppRanking, type AppEvent, type InsertAppEvent, gymLogs, type GymLog, type InsertGymLog,
-  gymExercises, gymPlans, gymDays, type GymDay, type GymExercise, type InsertGymExercise, type InsertGymLogBatch,
+  gymExercises, gymPlans, gymDays, gymPrefs, type GymPrefs, type GymDay, type GymExercise, type InsertGymExercise, type InsertGymLogBatch,
   spotifyTokens, type SpotifyToken,
   media, type Media
 } from "@shared/schema";
@@ -66,6 +66,8 @@ export interface IStorage {
   deleteGymExercise(userId: string, id: string): Promise<boolean>;
   getGymPlan(userId: string): Promise<GymPlan | null>;
   getGymDays(userId: string, from: string): Promise<GymDay[]>;
+  getGymPrefs(userId: string): Promise<GymPrefs>;
+  saveGymPrefs(userId: string, prefs: GymPrefs): Promise<GymPrefs>;
   saveGymDay(userId: string, day: string, done: string[], completed: boolean): Promise<GymDay>;
   saveGymPlan(userId: string, plan: GymPlan): Promise<GymPlan>;
 
@@ -170,6 +172,17 @@ export class DrizzleStorage implements IStorage {
   async createGymExercise(userId: string, ex: InsertGymExercise): Promise<GymExercise> {
     const [row] = await db.insert(gymExercises).values({ ...ex, userId }).returning();
     return row;
+  }
+
+  async getGymPrefs(userId: string): Promise<GymPrefs> {
+    const [row] = await db.select().from(gymPrefs).where(eq(gymPrefs.userId, userId));
+    return { unit: row?.unit === "lb" ? "lb" : "kg" };
+  }
+
+  async saveGymPrefs(userId: string, prefs: GymPrefs): Promise<GymPrefs> {
+    await db.insert(gymPrefs).values({ userId, unit: prefs.unit })
+      .onConflictDoUpdate({ target: gymPrefs.userId, set: { unit: prefs.unit } });
+    return prefs;
   }
 
   async getGymDays(userId: string, from: string): Promise<GymDay[]> {

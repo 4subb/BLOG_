@@ -12,6 +12,7 @@ import PlanToday from "@/components/gym/PlanToday";
 import WeekPlan from "@/components/gym/WeekPlan";
 import PlanEditor from "@/components/gym/PlanEditor";
 import { useGym } from "@/components/gym/useGym";
+import { fromKg } from "@shared/gym";
 
 // Gym: chat de registro en lenguaje natural + catálogo animado + historial.
 export default function Gym() {
@@ -79,8 +80,8 @@ export default function Gym() {
               {[
                 { k: L("Series hoy", "Sets today"), v: kpis.today, u: "" },
                 { k: L("Días esta semana", "Days this week"), v: kpis.weekDays, u: "/7" },
-                { k: L("Volumen 7 días", "7-day volume"), v: kpis.weekVolume, u: "kg" },
-                { k: L("Tonelaje total", "Total tonnage"), v: kpis.total, u: "kg" },
+                { k: L("Volumen 7 días", "7-day volume"), v: Math.round(fromKg(kpis.weekVolume, gym.unit)), u: gym.unit },
+                { k: L("Tonelaje total", "Total tonnage"), v: Math.round(fromKg(kpis.total, gym.unit)), u: gym.unit },
               ].map((s) => (
                 <div key={s.k} className="bg-background p-5">
                   <dt className="label-mono text-muted-foreground">{s.k}</dt>

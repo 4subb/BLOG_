@@ -35,7 +35,7 @@ function Sparkline({ series }: { series: ExerciseStats["series"] }) {
   );
 }
 
-function ExerciseCard({ ex, stats, onPick, onRemove }: { ex: GymExercise; stats?: ExerciseStats; onPick: () => void; onRemove: () => void }) {
+function ExerciseCard({ ex, stats, onPick, onRemove, w }: { ex: GymExercise; stats?: ExerciseStats; onPick: () => void; onRemove: () => void; w: (kg: number) => string }) {
   const { L, locale } = useLang();
   const [hover, setHover] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -57,7 +57,7 @@ function ExerciseCard({ ex, stats, onPick, onRemove }: { ex: GymExercise; stats?
           <div className="absolute inset-0 bg-grid opacity-40" />
           <ExerciseFigure pattern={ex.pattern} active={hover ? true : undefined} className="absolute inset-0 m-auto h-[82%] w-[82%]" />
           {stats && stats.best > 0 && (
-            <span className="label-mono absolute left-3 top-3 bg-background/80 px-1.5 text-foreground">PR {formatKg(stats.best)} kg</span>
+            <span className="label-mono absolute left-3 top-3 bg-background/80 px-1.5 text-foreground">PR {w(stats.best)}</span>
           )}
         </div>
         <div className="flex flex-1 flex-col gap-1 p-4">
@@ -66,7 +66,7 @@ function ExerciseCard({ ex, stats, onPick, onRemove }: { ex: GymExercise; stats?
           {stats ? (
             <>
               <p className="font-mono text-xs text-muted-foreground">
-                {stats.best1RM > 0 && <>1RM≈{Math.round(stats.best1RM)} kg · </>}
+                {stats.best1RM > 0 && <>1RM≈{w(Math.round(stats.best1RM))} · </>}
                 {stats.sessions} {L(stats.sessions === 1 ? "sesión" : "sesiones", stats.sessions === 1 ? "session" : "sessions")}
                 {stats.last && <> · {new Date(stats.last.date).toLocaleDateString(locale, { day: "numeric", month: "short" })}</>}
               </p>
@@ -207,6 +207,7 @@ export default function ExerciseGrid({ gym, onPick }: { gym: GymApi; onPick: (na
         <AnimatePresence mode="popLayout">
           {list.map((ex) => (
             <ExerciseCard
+              w={gym.w}
               key={ex.id}
               ex={ex}
               stats={gym.statsFor(ex.name)}
