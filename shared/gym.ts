@@ -54,10 +54,11 @@ export type ExerciseDef = {
 // animación y alias cuando un usuario añade un ejercicio a su propio catálogo (que empieza vacío).
 export const EXERCISE_LIBRARY: ExerciseDef[] = [
   // Pecho · press horizontal
-  { name: "Press banca", muscleGroup: "pecho", pattern: "press", family: "hpush", equipment: "barra", load: 1, aliases: ["banca", "press de banca", "press plano", "bench", "bench press", "pb"] },
+  { name: "Press banca", muscleGroup: "pecho", pattern: "press", family: "hpush", equipment: "barra", load: 1, aliases: ["banca", "press de banca", "press plano", "press banca plano", "banca plana", "press con barra", "bench", "bench press", "pb"] },
   { name: "Press con mancuernas", muscleGroup: "pecho", pattern: "press", family: "hpush", equipment: "mancuernas", load: 0.4, perHand: true, aliases: ["press mancuernas", "press de banca con mancuernas", "banca con mancuernas", "banca mancuernas", "dumbbell press", "db press"] },
   { name: "Press en máquina", muscleGroup: "pecho", pattern: "press", family: "hpush", equipment: "maquina", load: 0.9, aliases: ["press maquina", "press pecho maquina", "chest press", "press hammer", "hammer"] },
   { name: "Press banca en multipower", muscleGroup: "pecho", pattern: "press", family: "hpush", equipment: "multipower", load: 0.85, aliases: ["banca multipower", "press multipower", "banca smith", "smith bench"] },
+  { name: "Press declinado", muscleGroup: "pecho", pattern: "press", family: "hpush", equipment: "barra", load: 0.95, aliases: ["declinado", "banca declinada", "decline press"] },
   { name: "Flexiones", muscleGroup: "pecho", pattern: "press", family: "hpush", equipment: "peso corporal", bodyweight: true, aliases: ["flexion", "lagartijas", "lagartija", "push up", "pushups", "pechadas"] },
   // Pecho · inclinado
   { name: "Press inclinado", muscleGroup: "pecho", pattern: "incline", family: "incline", equipment: "barra", load: 0.8, aliases: ["inclinado", "banca inclinada", "incline press", "press inclinado con barra"] },
@@ -74,7 +75,7 @@ export const EXERCISE_LIBRARY: ExerciseDef[] = [
   { name: "Fondos en banco", muscleGroup: "brazos", pattern: "dip", family: "dip", equipment: "peso corporal", bodyweight: true, aliases: ["fondos banco", "bench dips"] },
   // Hombros
   { name: "Press militar", muscleGroup: "hombros", pattern: "overhead", family: "vpush", equipment: "barra", load: 1, aliases: ["militar", "press militar con barra", "press hombro", "ohp", "overhead press"] },
-  { name: "Press de hombro con mancuernas", muscleGroup: "hombros", pattern: "overhead", family: "vpush", equipment: "mancuernas", load: 0.38, perHand: true, aliases: ["press hombro mancuernas", "militar con mancuernas", "militar mancuernas", "press sentado mancuernas", "dumbbell shoulder press"] },
+  { name: "Press de hombro con mancuernas", muscleGroup: "hombros", pattern: "overhead", family: "vpush", equipment: "mancuernas", load: 0.38, perHand: true, aliases: ["press hombro mancuernas", "militar con mancuernas", "militar mancuernas", "press militar con mancuernas", "hombro con mancuernas", "press sentado mancuernas", "dumbbell shoulder press"] },
   { name: "Press de hombro en máquina", muscleGroup: "hombros", pattern: "overhead", family: "vpush", equipment: "maquina", load: 0.85, aliases: ["press hombro maquina", "militar maquina", "shoulder press machine"] },
   { name: "Press Arnold", muscleGroup: "hombros", pattern: "overhead", family: "vpush", equipment: "mancuernas", load: 0.32, perHand: true, aliases: ["arnold", "arnold press"] },
   { name: "Elevación lateral", muscleGroup: "hombros", pattern: "raise", family: "lateral", equipment: "mancuernas", load: 1, perHand: true, aliases: ["elevaciones laterales", "laterales", "lateral", "lateral raise", "vuelos laterales"] },
@@ -83,12 +84,15 @@ export const EXERCISE_LIBRARY: ExerciseDef[] = [
   { name: "Apertura invertida", muscleGroup: "hombros", pattern: "raise", family: "reardelt", equipment: "mancuernas", load: 1, perHand: true, aliases: ["aperturas invertidas", "reverse fly", "pajaros", "pajaro", "deltoides posterior"] },
   { name: "Face pull", muscleGroup: "hombros", pattern: "row", family: "reardelt", equipment: "polea", load: 2.5, aliases: ["facepull", "face pulls", "jalon a la cara"] },
   { name: "Pec deck invertido", muscleGroup: "hombros", pattern: "raise", family: "reardelt", equipment: "maquina", load: 3, aliases: ["contractor invertido", "reverse pec deck", "mariposa invertida"] },
+  { name: "Elevación frontal", muscleGroup: "hombros", pattern: "raise", family: "lateral", equipment: "mancuernas", load: 1, perHand: true, aliases: ["elevaciones frontales", "front raise", "frontales"] },
+  { name: "Remo al mentón", muscleGroup: "hombros", pattern: "raise", family: "lateral", equipment: "barra", load: 2.5, aliases: ["upright row", "remo menton"] },
+  { name: "Encogimientos de hombros", muscleGroup: "hombros", pattern: "raise", family: "reardelt", equipment: "mancuernas", load: 2.5, perHand: true, aliases: ["encogimiento de hombros", "encogimientos trapecio", "trapecio", "shrugs", "shrug"] },
   // Espalda · tirón vertical
   { name: "Dominadas", muscleGroup: "espalda", pattern: "pull", family: "vpull", equipment: "peso corporal", bodyweight: true, aliases: ["dominada", "dominadas estrictas", "pull up", "pullups", "chin up", "dom", "doms"] },
   { name: "Dominadas asistidas", muscleGroup: "espalda", pattern: "pull", family: "vpull", equipment: "maquina", aliases: ["dominadas en maquina", "dominadas con banda", "assisted pull up"] },
   { name: "Pulldown", muscleGroup: "espalda", pattern: "pull", family: "vpull", equipment: "polea", load: 1, aliases: ["jalon", "jalon al pecho", "polea al pecho", "lat pulldown"] },
-  { name: "Jalón al pecho", muscleGroup: "espalda", pattern: "pull", family: "vpull", equipment: "polea", load: 1, aliases: ["jalon", "polea al pecho", "lat pulldown"] },
   { name: "Jalón agarre estrecho", muscleGroup: "espalda", pattern: "pull", family: "vpull", equipment: "polea", load: 1, aliases: ["jalon estrecho", "jalon agarre cerrado", "close grip pulldown"] },
+  { name: "Pullover", muscleGroup: "espalda", pattern: "pull", family: "vpull", equipment: "polea", load: 0.5, aliases: ["pull over", "pullover en polea", "jalon brazos rectos"] },
   // Espalda · remo
   { name: "Remo con barra", muscleGroup: "espalda", pattern: "row", family: "hpull", equipment: "barra", load: 1, aliases: ["remo", "remo barra", "barbell row"] },
   { name: "Remo en banca al ombligo", muscleGroup: "espalda", pattern: "row", family: "hpull", equipment: "mancuernas", load: 0.4, perHand: true, aliases: ["remo en banca", "remo banca", "remo al ombligo", "chest supported row"] },
@@ -97,12 +101,17 @@ export const EXERCISE_LIBRARY: ExerciseDef[] = [
   { name: "Remo en máquina", muscleGroup: "espalda", pattern: "row", family: "hpull", equipment: "maquina", load: 0.9, aliases: ["remo maquina", "remo hammer", "machine row"] },
   { name: "Remo T", muscleGroup: "espalda", pattern: "row", family: "hpull", equipment: "barra", load: 0.8, aliases: ["remo en t", "t bar row", "remo landmine"] },
   // Brazos
-  { name: "Curl de bíceps", muscleGroup: "brazos", pattern: "curl", family: "biceps", equipment: "mancuernas", load: 1, perHand: true, aliases: ["curl", "curl biceps", "biceps", "curl mancuerna", "curl barra", "bi", "bis"] },
+  { name: "Curl de bíceps", muscleGroup: "brazos", pattern: "curl", family: "biceps", equipment: "mancuernas", load: 1, perHand: true, aliases: ["curl", "curl biceps", "biceps", "curl mancuerna", "bi", "bis"] },
   { name: "Curl martillo", muscleGroup: "brazos", pattern: "curl", family: "biceps", equipment: "mancuernas", load: 1.1, perHand: true, aliases: ["martillo", "hammer curl"] },
+  { name: "Curl con barra", muscleGroup: "brazos", pattern: "curl", family: "biceps", equipment: "barra", load: 2.2, aliases: ["curl barra", "curl de biceps con barra", "curl biceps barra", "curl barra z", "curl con barra z", "barbell curl"] },
+  { name: "Curl concentrado", muscleGroup: "brazos", pattern: "curl", family: "biceps", equipment: "mancuernas", load: 0.9, perHand: true, aliases: ["concentrado", "concentration curl"] },
+  { name: "Curl inclinado", muscleGroup: "brazos", pattern: "curl", family: "biceps", equipment: "mancuernas", load: 0.85, perHand: true, aliases: ["curl en banco inclinado", "incline curl"] },
   { name: "Curl en polea", muscleGroup: "brazos", pattern: "curl", family: "biceps", equipment: "polea", load: 1.6, aliases: ["curl polea", "cable curl"] },
   { name: "Curl predicador", muscleGroup: "brazos", pattern: "curl", family: "biceps", equipment: "maquina", load: 1.5, aliases: ["predicador", "curl scott", "scott", "preacher curl"] },
   { name: "Extensión de tríceps en polea", muscleGroup: "brazos", pattern: "extension", family: "triceps", equipment: "polea", load: 1, aliases: ["triceps", "triceps polea", "extension de triceps", "extension triceps", "agarre v", "pushdown", "jalon triceps", "tri", "tris"] },
   { name: "Press francés", muscleGroup: "brazos", pattern: "extension", family: "triceps", equipment: "barra", load: 1, aliases: ["frances", "skull crusher", "rompecraneos"] },
+  { name: "Press cerrado", muscleGroup: "brazos", pattern: "press", family: "triceps", equipment: "barra", load: 1.6, aliases: ["press agarre cerrado", "banca agarre cerrado", "banca cerrada", "close grip bench"] },
+  { name: "Patada de tríceps", muscleGroup: "brazos", pattern: "extension", family: "triceps", equipment: "mancuernas", load: 0.3, perHand: true, aliases: ["patada triceps", "tricep kickback"] },
   { name: "Extensión de tríceps sobre la cabeza", muscleGroup: "brazos", pattern: "extension", family: "triceps", equipment: "mancuernas", load: 0.8, aliases: ["triceps sobre la cabeza", "extension tras nuca", "overhead triceps", "copa"] },
   // Piernas · sentadilla
   { name: "Sentadilla", muscleGroup: "piernas", pattern: "squat", family: "squat", equipment: "barra", load: 1, aliases: ["sentadillas", "sentadilla barra libre", "sentadilla libre", "squat", "back squat", "sq"] },
@@ -110,9 +119,10 @@ export const EXERCISE_LIBRARY: ExerciseDef[] = [
   { name: "Sentadilla en multipower", muscleGroup: "piernas", pattern: "squat", family: "squat", equipment: "multipower", load: 0.9, aliases: ["sentadilla smith", "sentadilla multipower"] },
   { name: "Sentadilla goblet", muscleGroup: "piernas", pattern: "squat", family: "squat", equipment: "mancuernas", load: 0.3, aliases: ["goblet", "goblet squat", "sentadilla copa"] },
   { name: "Sentadilla frontal", muscleGroup: "piernas", pattern: "squat", family: "squat", equipment: "barra", load: 0.8, aliases: ["frontal", "front squat"] },
-  { name: "Prensa 90°", muscleGroup: "piernas", pattern: "legpress", family: "squat", equipment: "maquina", load: 1.8, aliases: ["prensa", "leg press", "prensa de piernas"] },
+  { name: "Sentadilla sumo", muscleGroup: "piernas", pattern: "squat", family: "squat", equipment: "mancuernas", load: 0.4, aliases: ["sumo squat", "sentadilla sumo con mancuerna"] },
+  { name: "Prensa 90°", muscleGroup: "piernas", pattern: "legpress", family: "squat", equipment: "maquina", load: 1.8, aliases: ["prensa", "leg press", "prensa de piernas", "prensa inclinada"] },
   // Piernas · zancadas
-  { name: "Sentadilla búlgara", muscleGroup: "piernas", pattern: "lunge", family: "lunge", equipment: "mancuernas", load: 1, perHand: true, aliases: ["bulgara", "bulgaras", "sentadillas bulgaras", "split squat"] },
+  { name: "Sentadilla búlgara", muscleGroup: "piernas", pattern: "lunge", family: "lunge", equipment: "mancuernas", load: 1, perHand: true, aliases: ["bulgara", "bulgaras", "zancada bulgara", "zancadas bulgaras", "sentadillas bulgaras", "split squat"] },
   { name: "Zancadas caminando", muscleGroup: "piernas", pattern: "lunge", family: "lunge", equipment: "mancuernas", load: 1, perHand: true, aliases: ["zancadas", "zancada", "walking lunges", "lunges", "estocadas"] },
   { name: "Zancada inversa", muscleGroup: "piernas", pattern: "lunge", family: "lunge", equipment: "mancuernas", load: 1, perHand: true, aliases: ["zancadas inversas", "reverse lunge", "zancada atras"] },
   { name: "Step-up", muscleGroup: "piernas", pattern: "lunge", family: "lunge", equipment: "mancuernas", load: 0.9, perHand: true, aliases: ["step up", "subidas al cajon", "subida al banco"] },
@@ -120,18 +130,21 @@ export const EXERCISE_LIBRARY: ExerciseDef[] = [
   { name: "Peso muerto rumano", muscleGroup: "piernas", pattern: "hinge", family: "hinge", equipment: "barra", load: 1, aliases: ["rumano", "rdl", "peso muerto", "romanian deadlift", "pmr"] },
   { name: "Peso muerto rumano con mancuernas", muscleGroup: "piernas", pattern: "hinge", family: "hinge", equipment: "mancuernas", load: 0.4, perHand: true, aliases: ["rumano mancuernas", "rdl mancuernas", "dumbbell rdl"] },
   { name: "Peso muerto convencional", muscleGroup: "espalda", pattern: "hinge", family: "hinge", equipment: "barra", load: 1.25, aliases: ["peso muerto", "deadlift", "pm"] },
+  { name: "Peso muerto sumo", muscleGroup: "piernas", pattern: "hinge", family: "hinge", equipment: "barra", load: 1.25, aliases: ["sumo deadlift", "pm sumo"] },
   { name: "Buenos días", muscleGroup: "piernas", pattern: "hinge", family: "hinge", equipment: "barra", load: 0.5, aliases: ["buenos dias", "good morning"] },
   { name: "Hiperextensiones", muscleGroup: "espalda", pattern: "hinge", family: "hinge", equipment: "peso corporal", bodyweight: true, aliases: ["hiperextension", "extensiones lumbares", "back extension", "banco romano"] },
   // Glúteo
   { name: "Hip thrust", muscleGroup: "piernas", pattern: "hinge", family: "glute", equipment: "barra", load: 1, aliases: ["empuje de cadera", "hip", "hip trust"] },
   { name: "Puente de glúteo", muscleGroup: "piernas", pattern: "hinge", family: "glute", equipment: "barra", load: 0.8, aliases: ["puente de gluteo", "glute bridge", "puente"] },
   { name: "Patada de glúteo en polea", muscleGroup: "piernas", pattern: "hinge", family: "glute", equipment: "polea", load: 0.2, aliases: ["patada de gluteo", "patada polea", "glute kickback"] },
+  { name: "Abductores", muscleGroup: "piernas", pattern: "legext", family: "glute", equipment: "maquina", load: 0.6, aliases: ["abductor", "abductores en maquina", "hip abduction"] },
+  { name: "Aductores", muscleGroup: "piernas", pattern: "legext", family: "glute", equipment: "maquina", load: 0.6, aliases: ["aductor", "aductores en maquina", "hip adduction"] },
   // Femoral / cuádriceps / gemelo
   { name: "Curl femoral unilateral", muscleGroup: "piernas", pattern: "legcurl", family: "legcurl", equipment: "maquina", load: 0.5, aliases: ["curl femoral", "femoral", "femoral unilateral", "leg curl"] },
   { name: "Curl femoral tumbado", muscleGroup: "piernas", pattern: "legcurl", family: "legcurl", equipment: "maquina", load: 1, aliases: ["femoral tumbado", "lying leg curl", "curl femoral acostado"] },
   { name: "Curl femoral sentado", muscleGroup: "piernas", pattern: "legcurl", family: "legcurl", equipment: "maquina", load: 1.1, aliases: ["femoral sentado", "seated leg curl"] },
   { name: "Curl nórdico", muscleGroup: "piernas", pattern: "legcurl", family: "legcurl", equipment: "peso corporal", bodyweight: true, aliases: ["nordico", "nordicos", "nordic curl"] },
-  { name: "Extensión de cuádriceps", muscleGroup: "piernas", pattern: "legext", family: "legext", equipment: "maquina", load: 1, aliases: ["extension de cuadriceps", "extension cuadriceps", "cuadriceps", "extensiones", "leg extension", "cuads"] },
+  { name: "Extensión de cuádriceps", muscleGroup: "piernas", pattern: "legext", family: "legext", equipment: "maquina", load: 1, aliases: ["extension de cuadriceps", "extension cuadriceps", "cuadriceps", "extensiones", "extension de pierna", "extensiones de pierna", "leg extension", "cuads"] },
   { name: "Extensión de cuádriceps unilateral", muscleGroup: "piernas", pattern: "legext", family: "legext", equipment: "maquina", load: 0.5, aliases: ["extension unilateral", "cuadriceps unilateral"] },
   { name: "Sissy squat", muscleGroup: "piernas", pattern: "squat", family: "legext", equipment: "peso corporal", bodyweight: true, aliases: ["sissy", "sentadilla sissy"] },
   { name: "Pantorrilla sentado", muscleGroup: "piernas", pattern: "calf", family: "calf", equipment: "maquina", load: 1, aliases: ["pantorrilla", "pantorrillas", "gemelos", "soleo", "calf raise"] },
@@ -145,11 +158,48 @@ export const EXERCISE_LIBRARY: ExerciseDef[] = [
   { name: "Crunch en polea", muscleGroup: "core", pattern: "core", family: "core", equipment: "polea", aliases: ["crunch polea", "cable crunch", "abdominal en polea"] },
 ];
 
-/** Busca en la biblioteca por nombre o alias (sin acentos ni mayúsculas) */
+/** Busca en la biblioteca por nombre o, si no, por alias (sin acentos ni mayúsculas) */
 export const findInLibrary = (name: string) => {
   const n = normalize(name.trim());
-  return n ? EXERCISE_LIBRARY.find((e) => normalize(e.name) === n || e.aliases.some((a) => normalize(a) === n)) : undefined;
+  if (!n) return undefined;
+  return EXERCISE_LIBRARY.find((e) => normalize(e.name) === n) ?? EXERCISE_LIBRARY.find((e) => e.aliases.some((a) => normalize(a) === n));
 };
+
+// Palabras que no cambian de ejercicio ("sentadilla normal en barra libre" = "sentadilla")
+const NEUTRAL = new Set(["libre", "libres", "olimpica", "olimpico", "normal", "normales", "clasica", "clasico", "tradicional", "trasera", "regular", "estandar"]);
+const EQUIP_WORDS: Record<string, Equipment> = {
+  barra: "barra", barras: "barra", bara: "barra", barbell: "barra",
+  mancuerna: "mancuernas", mancuernas: "mancuernas", mancuerda: "mancuernas", mancuerdas: "mancuernas", dumbbell: "mancuernas", dumbbells: "mancuernas",
+  maquina: "maquina", maquinas: "maquina", machine: "maquina",
+  polea: "polea", poleas: "polea", cable: "polea", cables: "polea",
+  smith: "multipower", multipower: "multipower",
+};
+
+const keyWords = (s: string) => normalize(s).split(/[^a-z0-9°]+/).filter((w) => w && !FILLER.has(w));
+const keyCache = new Map<string, string>();
+/**
+ * Identidad de un ejercicio: dos nombres con la misma clave son el mismo ("Sentadilla", "sentadilla en
+ * barra libre", "Squat"). Solo se ignora el material si es el habitual de ese ejercicio: "press banca con
+ * barra" = "press banca", pero "curl con barra" ≠ "curl de bíceps" (mancuernas).
+ */
+export function exerciseKey(name: string): string {
+  const hit = keyCache.get(name);
+  if (hit !== undefined) return hit;
+  let def = findInLibrary(name);
+  const words = keyWords(name).filter((w) => !NEUTRAL.has(w));
+  if (!def) {
+    const core = words.filter((w) => !(w in EQUIP_WORDS));
+    const equip = Array.from(new Set(words.flatMap((w) => EQUIP_WORDS[w] ?? [])));
+    const lookup = (ws: string[], ok: (e: ExerciseDef) => boolean) =>
+      ws.length ? EXERCISE_LIBRARY.find((e) => ok(e) && [e.name, ...e.aliases].some((f) => keyWords(f).join(" ") === ws.join(" "))) : undefined;
+    def = lookup(words, () => true) ?? (equip.length === 1 ? lookup(core, (e) => e.equipment === equip[0]) : undefined);
+  }
+  const key = def ? normalize(def.name) : words.map((w) => (w.length > 4 ? w.replace(/s$/, "") : w)).join(" ") || normalize(name).trim();
+  if (keyCache.size > 2000) keyCache.clear();
+  keyCache.set(name, key);
+  return key;
+}
+export const sameExercise = (a: string, b: string) => a === b || exerciseKey(a) === exerciseKey(b);
 
 // ───────────────────────── utilidades ─────────────────────────
 
@@ -186,20 +236,29 @@ function lev(a: string, b: string) {
 }
 
 // Tolera erratas: 1 letra en palabras de 5+, 2 en palabras de 9+ ("sentadila", "dominadass")
+// Palabras corrientes que no son erratas de otro ejercicio ("plano" no es "plank")
+const NOT_TYPO = new Set(["plano", "plana", "planos", "planas", "prensa", "press", "pesos", "peso", "pierna", "piernas", "barra", "banco", "hombro", "hombros", "lado", "lados"]);
 function wordMatches(token: string, word: string, prefix = false) {
   if (token === word) return true;
-  if (!/^[a-z]+$/.test(token)) return false;
+  if (!/^[a-z]+$/.test(token) || NOT_TYPO.has(token)) return false;
   // Abreviatura: "sent" → sentadilla, "domi" → dominadas (solo en la 2.ª pasada)
   if (prefix && token.length >= 4 && word.startsWith(token)) return true;
   if (word.length < 5) return false;
   return lev(token, word) <= (word.length >= 9 ? 2 : 1);
 }
 
+const JOIN = new Set(["y", "e", "mas", "luego", "despues", "and", "then", "+"]);
 const FILLER = new Set(["de", "del", "en", "la", "el", "al", "con"]);
 
 // ───────────────────────── analizador ─────────────────────────
 
-export type CatalogItem = { name: string; aliases: string[]; bodyweight: boolean };
+export type CatalogItem = {
+  name: string; aliases: string[]; bodyweight: boolean;
+  /** Está en la rutina de hoy */
+  today?: boolean;
+  /** Lo hace con otro material que el habitual (p. ej. apertura invertida en máquina): no cambiar de ejercicio por el material */
+  anyEquipment?: boolean;
+};
 export type HistoryItem = { exercise: string; weight: number; sets: number; reps: number; date: string | Date };
 
 export type ParsedEntry = {
@@ -215,6 +274,10 @@ export type ParsedEntry = {
 
 export type ParseResult =
   | { intent: "undo" }
+  | { intent: "redo" }
+  | { intent: "start"; exercise: string }         // "hoy sentadilla en barra libre": pasa a ser el ejercicio en curso
+  /** "no, era sentadilla" · "eran 70kg": corrige lo último registrado */
+  | { intent: "fix"; exercise: string | null; weight: number | null; sets: number | null; reps: number | null }
   | { intent: "help" }
   | { intent: "finish" }                          // "terminé", "rutina completa"
   | { intent: "done"; exercise: string }          // "remo listo", "ya completé dominadas"
@@ -243,24 +306,51 @@ function findExercises(tokens: string[], catalog: CatalogItem[]): Match[] {
     .sort((a, b) => b.words.length - a.words.length);
 
   const tryAt = (i: number, prefix: boolean): Match | null => {
+    // A igual longitud gana la coincidencia sin erratas ("press inclinado" no es "press declinado")
+    let best: (Match & { len: number }) | null = null;
     for (const f of forms) {
-      let t = i, w = 0;
+      if (best && f.words.length < best.len) break;
+      let t = i, w = 0, exact = true;
       while (w < f.words.length && t < tokens.length) {
-        if (wordMatches(tokens[t], f.words[w], prefix)) { t++; w++; }
+        if (wordMatches(tokens[t], f.words[w], prefix)) { if (tokens[t] !== f.words[w]) exact = false; t++; w++; }
         else if (w > 0 && FILLER.has(tokens[t])) t++; // "press de banca" ≈ "press banca"
         else break;
       }
-      if (w === f.words.length) return { start: i, end: t, name: f.name };
+      if (w === f.words.length) {
+        if (exact) return { start: i, end: t, name: f.name };
+        best ??= { start: i, end: t, name: f.name, len: w };
+      }
     }
-    return null;
+    return best;
   };
   const out: Match[] = [];
   let i = 0;
   while (i < tokens.length) {
     const hit = tryAt(i, false) ?? tryAt(i, true);
-    if (hit) { out.push(hit); i = hit.end; } else i++;
+    if (!hit) { i++; continue; }
+    i = hit.end;
+    // Dos nombres seguidos sin números ni "y" en medio hablan del mismo ejercicio: gana el más específico
+    const prev = out[out.length - 1];
+    if (prev && !tokens.slice(prev.end, hit.start).some((t) => /\d/.test(t) || JOIN.has(t))) {
+      const longer = hit.end - hit.start > prev.end - prev.start;
+      out[out.length - 1] = { start: prev.start, end: hit.end, name: longer ? hit.name : prev.name };
+    } else out.push(hit);
   }
-  return out;
+  // Mismo ejercicio con otro nombre en el catálogo → el primero (rutina de hoy, luego propios, luego biblioteca)
+  return out.map((m) => ({ ...m, name: catalog.find((c) => sameExercise(c.name, m.name))?.name ?? m.name }));
+}
+
+/** "press militar … con mancuernas" → el ejercicio de esa familia con ese material (solo desde el ejercicio base) */
+function byEquipment(name: string, words: string[], catalog: CatalogItem[]): string {
+  const cat = catalog.find((c) => c.name === name);
+  const def = EXERCISE_LIBRARY.find((e) => sameExercise(e.name, name));
+  const said = Array.from(new Set(words.flatMap((w) => EQUIP_WORDS[w] ?? [])));
+  if (!def?.equipment || cat?.anyEquipment || said.length !== 1 || said[0] === def.equipment) return name;
+  if (def.equipment === "polea" && said[0] === "barra") return name; // la barra es el agarre de la polea
+  const family = EXERCISE_LIBRARY.filter((e) => e.family === def.family && e.pattern === def.pattern);
+  if (family[0] !== def) return name;
+  const other = family.find((e) => e.equipment === said[0]);
+  return other ? catalog.find((c) => sameExercise(c.name, other.name))?.name ?? other.name : name;
 }
 
 // Formas abreviadas o mal escritas → forma canónica que entienden las expresiones de abajo
@@ -333,6 +423,7 @@ export function parseNumbers(segment: string, repsFirst = false): Group[] {
   const pairs: { a: number; unitA?: string; b: number; pos: number }[] = [];
   const weights: { v: number; pos: number; explicit: boolean }[] = [];
   let sets: number | null = null, reps: number | null = null;
+  const repsSeen: { v: number; pos: number }[] = [];
 
   // 80x3x10  ·  3x10x80kg
   eat(new RegExp(`${NUM}\\s*${UNIT}?\\s*x\\s*(\\d+)\\s*x\\s*${NUM}\\s*${UNIT}?`, "g"), (m, pos) => {
@@ -345,12 +436,18 @@ export function parseNumbers(segment: string, repsFirst = false): Group[] {
   eat(/(\d+(?:\s*-\s*\d+)+)(?!\s*(?:kg|kilos?|k|lbs?|libras?)\b)/g, (m, pos) => {
     repLists.push({ reps: m[1].split("-").map((n) => +n.trim()), pos });
   });
+  // "4 series 6 8 7 8" → repeticiones de cada serie; "3 series 8 70" → 3×8 con 70
+  eat(/(\d+)\s*series\s*(?:de\s*)?((?:\d+\s+)+\d+)(?![\d.])(?!\s*(?:kg|lb|x|series|reps))/g, (m, pos) => {
+    const list = m[2].trim().split(/\s+/).map(Number);
+    if (list.length === 2 && +m[1] !== 2) { sets = +m[1]; reps = list[0]; weights.push({ v: toKg(list[1]), pos, explicit: false }); }
+    else repLists.push({ reps: list, pos });
+  });
   // "3 series de 10", "4 sets of 8"
   eat(/(\d+)\s*(?:series|serie|sets?)\s*(?:de|of|x)?\s*(\d+)\s*(?:repeticiones|repes|reps?)?/g, (m) => { sets = +m[1]; reps = +m[2]; });
   // A x B (luego decidimos si es peso×reps o series×reps)
   eat(new RegExp(`${NUM}\\s*${UNIT}?\\s*x\\s*(\\d+)(?!\\.\\d)`, "g"), (m, pos) => pairs.push({ a: +m[1], unitA: m[2], b: +m[3], pos }));
   eat(/(\d+)\s*(?:series|serie|sets?)\b/g, (m) => { sets = +m[1]; });
-  eat(/(\d+)\s*(?:repeticiones|repes|reps?|veces)\b/g, (m) => { reps = +m[1]; });
+  eat(/(\d+)\s*(?:repeticiones|repes|reps?|veces)\b/g, (m, pos) => { reps = +m[1]; repsSeen.push({ v: +m[1], pos }); });
   eat(new RegExp(`${NUM}\\s*${UNIT}\\b`, "g"), (m, pos) => weights.push({ v: toKg(+m[1], m[2]), pos, explicit: true }));
   // "con 60", "@60" → peso aunque no lleve unidad
   eat(new RegExp(`(?:\\bcon|@)\\s*${NUM}`, "g"), (m, pos) => weights.push({ v: toKg(+m[1]), pos, explicit: true }));
@@ -383,6 +480,13 @@ export function parseNumbers(segment: string, repsFirst = false): Group[] {
   const nearestWeight = (pos: number) =>
     weights.length ? weights.reduce((best, w) => (Math.abs(w.pos - pos) < Math.abs(best.pos - pos) ? w : best)).v : null;
 
+  // "8 reps 70kg 7 reps 70kg" → una serie por cada una, con su peso
+  if (repsSeen.length > 1 && sets === null) {
+    repsSeen.forEach((r, i) => groups.push({
+      weight: weights.length === repsSeen.length ? weights[i].v : nearestWeight(r.pos), sets: 1, reps: r.v, pos: r.pos,
+    }));
+  }
+
   for (const p of pairs) {
     const weightByReps =
       !!p.unitA || (!weights.length && sets === null && (p.a > 12 || !Number.isInteger(p.a)));
@@ -409,6 +513,26 @@ export function parseNumbers(segment: string, repsFirst = false): Group[] {
     else merged.push({ ...g });
   }
   return merged;
+}
+
+/** Ejercicios del catálogo que se parecen a un nombre desconocido (comparten alguna palabra, con erratas) */
+export function suggestExercises(name: string, catalog: CatalogItem[], max = 4): string[] {
+  const useful = (f: string) => normalize(f).split(/[^a-z]+/).filter((w) => w.length > 2 && !FILLER.has(w) && !NEUTRAL.has(w));
+  const words = useful(name);
+  return catalog
+    .map((c, i) => {
+      const score = Math.max(...[c.name, ...c.aliases].map((f) => {
+        const fw = useful(f);
+        const hits = words.filter((w) => fw.some((x) => wordMatches(w, x, true)));
+        // el material solo no basta: "algo en barra" no sugiere todo lo de barra
+        return hits.some((w) => !(w in EQUIP_WORDS)) ? hits.length / Math.max(words.length, fw.length) : 0;
+      }));
+      return { name: c.name, score: score + (c.today && score ? 0.3 : 0), i };
+    })
+    .filter((x) => x.score > 0.25)
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .slice(0, max)
+    .map((x) => x.name);
 }
 
 function dayOffsetOf(text: string) {
@@ -449,12 +573,26 @@ export function parseWorkoutMessage(
   let text = canonicalize(normalize(input).trim(), protectedWords);
   // decimales con coma solo cuando van pegados a una unidad: "82,5kg" (no "60x10,70x8")
   text = text.replace(/(\d+),(\d{1,2})(?=\s*(?:kg|kilos?|k|lbs?|libras?)\b)/g, "$1.$2").replace(/\bpor\b/g, "x");
+  // Coma decimal sin unidad: "72,5 4x8", "3x15 7,5" (nunca "8,7,6" ni "60x10,70x8")
+  text = text.replace(/(^|\s)(\d{1,3}),(5|25|75)(?=\s+\d+\s*x\s*\d)/g, "$1$2.$3")
+    .replace(/(x\s*\d+\s+(?:con\s+)?)(\d{1,3}),(5|25|75)(?=\s*(?:$|[a-z]))/g, "$1$2.$3")
+    .replace(/(^|\s)([2-9]\d|1\d\d),(5|25|75)(?=\s|$)/g, "$1$2.$3")
+    .replace(/\b\d+\s*(?:grados|°)/g, " ")
+    .replace(/\s*[,;]\s*(?=[a-z])/g, " y "); // "banca 60x8, sentadilla 70x8": separa ejercicios
+  // Series numeradas: "1 series 8 reps … 2 series 7 reps" / "series 1 8 … series 2 7" → el 1, 2, 3 solo numera
+  const numbered = (re: RegExp) => {
+    const ns = Array.from(text.matchAll(re)).map((m) => +m[1]);
+    if (ns.length > 1 && ns.every((n, i) => n === i + 1)) text = text.replace(re, " ");
+  };
+  numbered(/\b(\d+) series (?=(?:de )?\d+)/g);
+  numbered(/\bseries (\d+)\s*(?:[:=-]|de)?\s+(?=\d)/g);
   // Ordinales de serie: "1ra serie", "2ª serie", "serie 3:" → solo numeran, no son datos
   text = text
     .replace(/\b\d+\s*(?:ra|da|ta|era|er|na|ma|va|a|o|ª|º|°)\s*(?:series?|sets?)\b/g, " ")
     .replace(/\b(?:series?|sets?)\s*(?:#|n[oº°]?\.?)?\s*\d+\s*[:=]/g, " ");
 
-  if (/^(deshacer|deshaz|undo|borra(r)?( el)? ultimo|elimina(r)?( el)? ultimo)\b/.test(text)) return { intent: "undo" };
+  if (/^(deshacer|deshaz|undo|borra(r)?( el)? ultimo|elimina(r)?( el)? ultimo|quita(r)?( el)? ultimo)\b/.test(text)) return { intent: "undo" };
+  if (/^(rehacer|rehaz|redo|restaurar|restaura|recuperar|recupera)\b/.test(text)) return { intent: "redo" };
   if (/^(ayuda|help|\?|como funciona)/.test(text)) return { intent: "help" };
 
   // Conversión: "135 lb a kg", "cuanto es 60 kg en libras", "convierte 100 lb"
@@ -467,6 +605,17 @@ export function parseWorkoutMessage(
   let tokens = text.replace(/(\d)\s*-\s*(?=\d)/g, "$1-").split(/[^a-z0-9.+-]+/).filter(Boolean).map((t) => t.replace(/^[.-]+|[.-]+$/g, "")).filter(Boolean);
   let matches = findExercises(tokens, catalog);
   const hasNumbers = /\d/.test(text);
+
+  // Corrección de lo último: "no, era sentadilla", "perdón, eran 70kg", "corrige 4x8"
+  if (/^(?:(?:no|perdon|ups)\s+(?:y\s+)?)*(?:era|eran|fue|fueron|quise decir|queria decir|corrige|corregir|corrijo|me equivoque)\b/.test(text)) {
+    const ex = matches[0] ? byEquipment(matches[0].name, tokens, catalog) : null;
+    const nums = parseNumbers(tokens.filter((_, i) => !matches.some((m) => i >= m.start && i < m.end)).join(" "));
+    // Un número suelto sin unidad no dice si es peso o repeticiones: no se toca
+    const g = nums.length === 1 && !nums[0].bare ? nums[0] : null;
+    // "eran 8 reps" no dice cuántas series: se conservan
+    const saysSets = !!g && ((g.sets ?? 0) > 1 || /\b1\s?x|series/.test(text));
+    if (ex || g) return { intent: "fix", exercise: ex, weight: g?.weight ?? null, sets: saysSets ? g!.sets : null, reps: g?.reps ?? null };
+  }
 
   // Variante: "press mancuernas 30 3x10 en vez de banca", "en lugar de banca hice ...", "variante de banca: ..."
   let variantOf: string | null = null;
@@ -500,22 +649,29 @@ export function parseWorkoutMessage(
   if (!hasNumbers && /\b(record|pr|maximo|mejor|progreso|ultima vez|ultimo|cuanto|best)\b/.test(text)) {
     return { intent: "query", exercise: matches[0]?.name ?? null };
   }
-  if (!hasNumbers && matches.length) return { intent: "query", exercise: matches[0].name };
+  if (!hasNumbers && matches.length) return { intent: "start", exercise: byEquipment(matches[0].name, tokens, catalog) };
 
   const dayOffset = dayOffsetOf(text);
   const entries: ParsedEntry[] = [];
   const incomplete: ParsedEntry[] = [];
   let unknownName: string | null = null;
 
-  type Seg = { name: string; text: string; context?: boolean };
+  type Seg = { name: string; text: string; context?: boolean; base?: string };
   const segments: Seg[] = [];
   if (matches.length) {
+    const isNum = (t: string) => /\d/.test(t);
+    // "4x8 72kg sentadilla y 3x10 60kg banca": los números van delante de cada ejercicio
+    const numbersFirst = tokens.slice(0, matches[0].start).some(isNum) && !tokens.slice(matches[matches.length - 1].end).some(isNum);
     matches.forEach((m, i) => {
-      const from = i === 0 ? 0 : m.end; // los números antes del primer ejercicio son suyos ("3x10 press militar 40")
-      const to = matches[i + 1]?.start ?? tokens.length;
-      const own = tokens.slice(m.end, to);
-      const prefix = i === 0 ? tokens.slice(from, m.start).filter((t) => /\d/.test(t)) : [];
-      segments.push({ name: m.name, text: [...prefix, ...own].join(" ") });
+      const own = tokens.slice(m.end, matches[i + 1]?.start ?? tokens.length);
+      const before = tokens.slice(matches[i - 1]?.end ?? 0, m.start);
+      const nums = numbersFirst ? before : i === 0 ? [...before.filter(isNum), ...own] : own;
+      // Material mencionado junto al ejercicio (hasta el siguiente "y")
+      const cut = own.findIndex((t) => JOIN.has(t));
+      const name = byEquipment(m.name, [...tokens.slice(m.start, m.end), ...(cut < 0 ? own : own.slice(0, cut))], catalog);
+      // Mención sin números de un ejercicio que ya está en el mensaje: no es otro registro
+      if (!nums.some(isNum) && matches.some((o, j) => j !== i && sameExercise(o.name, m.name))) return;
+      segments.push({ name, base: name !== m.name ? m.name : undefined, text: nums.join(" ") });
     });
   } else if (hasNumbers) {
     const firstNum = tokens.findIndex((t) => /\d/.test(t));
@@ -524,7 +680,9 @@ export function parseWorkoutMessage(
       // Ejercicio desconocido: las palabras antes del primer número
       unknownName = words.slice(-4).join(" ");
       unknownName = unknownName.charAt(0).toUpperCase() + unknownName.slice(1);
-      segments.push({ name: unknownName, text: tokens.slice(firstNum).join(" ") });
+      const known = catalog.find((c) => sameExercise(c.name, unknownName!));
+      if (known) unknownName = null;
+      segments.push({ name: known?.name ?? unknownName!, text: tokens.slice(firstNum).join(" ") });
     } else if (context && !variantOf) {
       // Serie a serie del ejercicio en curso: "segunda serie 7"
       segments.push({ name: context, text: tokens.join(" "), context: true });
@@ -534,10 +692,14 @@ export function parseWorkoutMessage(
   for (const seg of segments) {
     const cat = catalog.find((c) => c.name === seg.name);
     const last = history
-      .filter((h) => normalize(h.exercise) === normalize(seg.name))
+      .filter((h) => sameExercise(h.exercise, seg.name))
       .sort((a, b) => +new Date(b.date) - +new Date(a.date))[0];
     const groups = parseNumbers(seg.text, !!cat?.bodyweight || !!seg.context);
-    if (!groups.length) groups.push({ weight: null, sets: null, reps: null, pos: 0 });
+    if (!groups.length) {
+      // Nombrado sin números (los números eran de otro ejercicio): se pregunta, no se inventa
+      incomplete.push({ exercise: seg.name, weight: null, sets: null, reps: null, assumed: [] });
+      continue;
+    }
 
     for (const g of groups) {
       // Un número suelto: si es mucho menor que el peso habitual, son repeticiones ("banca 8" con 60 kg)
@@ -547,7 +709,8 @@ export function parseWorkoutMessage(
       // Serie a serie: cada número es una serie, no "N series como la última vez"
       if (g.reps !== null && g.sets === null && (seg.context || cat?.bodyweight)) g.sets = 1;
       const e: ParsedEntry = { exercise: seg.name, weight: g.weight, sets: g.sets, reps: g.reps, assumed: [] };
-      if (variantOf && normalize(seg.name) !== normalize(variantOf)) e.variantOf = variantOf;
+      if (variantOf && !sameExercise(seg.name, variantOf)) e.variantOf = variantOf;
+      else if (seg.base && catalog.find((c) => c.name === seg.base)?.today) e.variantOf = seg.base;
       if (e.reps === null || e.sets === null) {
         if (last) { e.sets = e.sets ?? last.sets; e.reps = e.reps ?? last.reps; e.assumed.push("setsreps"); }
       }
@@ -612,7 +775,7 @@ export type Session = { day: string; weightKg: number; reps: number[]; total: nu
 export function sessionsOf(exercise: string, logs: LogLike[]): Session[] {
   const byDay = new Map<string, LogLike[]>();
   for (const l of logs) {
-    if (normalize(l.exercise) !== normalize(exercise)) continue;
+    if (!sameExercise(l.exercise, exercise)) continue;
     const k = todayKey(new Date(l.date));
     byDay.set(k, [...(byDay.get(k) ?? []), l]);
   }

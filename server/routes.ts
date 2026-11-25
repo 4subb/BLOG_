@@ -17,7 +17,7 @@ import {
   insertCommentSchema, 
   sportCategoryEnum, 
   insertGymLogSchema, 
-  insertGymLogBatchSchema,
+  updateGymLogSchema, restoreGymLogsSchema, insertGymLogBatchSchema,
   insertGymExerciseSchema,
   gymPlanSchema,
   gymDaySchema,
@@ -292,6 +292,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const val = z.object({ ids: z.array(z.string().max(64)).min(1).max(100) }).safeParse(req.body);
     if (!val.success) return res.status(400).json(val.error);
     res.json({ deleted: await storage.deleteGymLogs(req.session.userId, val.data.ids) });
+  });
+
+  // Rehacer: restaura registros borrados
+  app.post('/api/gym/restore', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    const val = restoreGymLogsSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    res.status(201).json(await storage.restoreGymLogs(req.session.userId, val.data.logs));
+  });
+
+  // Corregir un registro propio
+  app.patch('/api/gym/logs/:id', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    const val = updateGymLogSchema.safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    const row = await storage.updateGymLog(req.session.userId, req.params.id, val.data);
+    if (!row) return res.status(404).json({ message: "Registro no encontrado" });
+    res.json(row);
+  });
+
+  app.post('/api/gym/exercises/:id/alias', async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Login requerido" });
+    const val = z.object({ alias: z.string().trim().min(2).max(40) }).safeParse(req.body);
+    if (!val.success) return res.status(400).json(val.error);
+    const row = await storage.addGymExerciseAlias(req.session.userId, req.params.id, val.data.alias);
+    if (!row) return res.status(404).json({ message: "Ejercicio no encontrado" });
+    res.json(row);
   });
 
   app.get('/api/gym/exercises', async (req, res) => {

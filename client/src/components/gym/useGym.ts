@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { GymDay, GymExercise, GymLog, GymPrefs, InsertGymExercise, InsertGymLogBatch } from "@shared/schema";
+import type { GymDay, GymExercise, GymLog, GymPrefs, InsertGymExercise, InsertGymLogBatch, UpdateGymLog } from "@shared/schema";
 import {
-  coach, convertWeight, estimate1RM, fmtW, isoDow, normalize, sessionsOf, todayKey, type GymPlan, type PlanItem, type Unit, type Verdict,
+  coach, convertWeight, estimate1RM, exerciseKey, fmtW, isoDow, sameExercise, sessionsOf, todayKey, type GymPlan, type PlanItem, type Unit, type Verdict,
 } from "@shared/gym";
 
 export const LOGS_KEY = ["/api/gym/me"];
@@ -26,7 +26,23 @@ export type ExerciseStats = {
 
 const dayKey = (d: string | Date) => new Date(d).toLocaleDateString("sv-SE"); // YYYY-MM-DD local
 
-export function useGym(enabled: boolean) {
+/** Registros borrados hace poco: se guardan en este navegador para poder restaurarlos */
+export type Trashed = { deletedAt: number; logs: GymLog[] };
+const MAX_TRASH = 30;
+const loadTrash = (key: string): Trashed[] => {
+  try { return JSON.parse(localStorage.getItem(key) ?? "[]"); } catch { return []; }
+};
+
+export function useGym(userId: string | undefined) {
+  const enabled = !!userId;
+  const trashKey = `gym-trash:${userId}`;
+  const [trash, setTrashState] = useState<{ key: string; list: Trashed[] }>(() => ({ key: trashKey, list: loadTrash(trashKey) }));
+  const trashed = trash.key === trashKey ? trash.list : loadTrash(trashKey);
+  const setTrash = (fn: (t: Trashed[]) => Trashed[]) => {
+    const list = fn(loadTrash(trashKey)).filter((t) => t.logs.length).slice(0, MAX_TRASH);
+    try { localStorage.setItem(trashKey, JSON.stringify(list)); } catch { /* almacenamiento lleno o bloqueado */ }
+    setTrashState({ key: trashKey, list });
+  };
   const logsQ = useQuery<GymLog[]>({ queryKey: LOGS_KEY, enabled });
   const exQ = useQuery<GymExercise[]>({ queryKey: EXERCISES_KEY, enabled });
   const planQ = useQuery<GymPlan | null>({ queryKey: PLAN_KEY, enabled });
@@ -42,7 +58,7 @@ export function useGym(enabled: boolean) {
     const map = new Map<string, ExerciseStats>();
     // logs llega ordenado por fecha desc
     for (const l of [...logs].reverse()) {
-      const k = normalize(l.exercise);
+      const k = exerciseKey(l.exercise);
       const s = map.get(k) ?? { best: 0, best1RM: 0, sessions: 0, series: [] };
       s.best = Math.max(s.best, l.weight);
       s.best1RM = Math.max(s.best1RM, estimate1RM(l.weight, l.reps));
@@ -56,7 +72,7 @@ export function useGym(enabled: boolean) {
     return map;
   }, [logs]);
 
-  const statsFor = (name: string) => stats.get(normalize(name));
+  const statsFor = (name: string) => stats.get(exerciseKey(name));
 
   const logBatch = useMutation({
     mutationFn: async (batch: InsertGymLogBatch) => (await apiRequest("POST", "/api/gym/batch", batch)).json() as Promise<GymLog[]>,
@@ -68,7 +84,42 @@ export function useGym(enabled: boolean) {
 
   const deleteLogs = useMutation({
     mutationFn: async (ids: string[]) => { await apiRequest("POST", "/api/gym/delete", { ids }); return ids; },
-    onSuccess: (ids) => queryClient.setQueryData<GymLog[]>(LOGS_KEY, (old = []) => old.filter((l) => !ids.includes(l.id))),
+    onSuccess: (ids) => {
+      const gone = (queryClient.getQueryData<GymLog[]>(LOGS_KEY) ?? []).filter((l) => ids.includes(l.id));
+      setTrash((t) => [{ deletedAt: Date.now(), logs: gone }, ...t]);
+      queryClient.setQueryData<GymLog[]>(LOGS_KEY, (old = []) => old.filter((l) => !ids.includes(l.id)));
+    },
+  });
+
+  /** Rehacer: devuelve registros borrados con su id y fecha originales */
+  const restoreLogs = useMutation({
+    mutationFn: async (rows: GymLog[]) =>
+      (await apiRequest("POST", "/api/gym/restore", {
+        logs: rows.map(({ id, date, exercise, weight, sets, reps, notes, variantOf }) => ({ id, date, exercise, weight, sets, reps, notes, variantOf })),
+      })).json() as Promise<GymLog[]>,
+    onSuccess: (rows, asked) => {
+      const back = new Set(asked.map((l) => l.id));
+      setTrash((t) => t.map((x) => ({ ...x, logs: x.logs.filter((l) => !back.has(l.id)) })));
+      queryClient.setQueryData<GymLog[]>(LOGS_KEY, (old = []) =>
+        [...rows, ...old.filter((l) => !back.has(l.id))].sort((a, b) => +new Date(b.date) - +new Date(a.date)));
+    },
+  });
+  /** Registros borrados con esos ids que aún se pueden restaurar */
+  const trashedLogs = (ids: string[]) => {
+    const found = new Map(loadTrash(trashKey).flatMap((t) => t.logs).map((l) => [l.id, l]));
+    return ids.flatMap((id) => found.get(id) ?? []);
+  };
+
+  const updateLog = useMutation({
+    mutationFn: async ({ id, ...patch }: UpdateGymLog & { id: string }) =>
+      (await apiRequest("PATCH", `/api/gym/logs/${id}`, patch)).json() as Promise<GymLog>,
+    onSuccess: (row) => queryClient.setQueryData<GymLog[]>(LOGS_KEY, (old = []) => old.map((l) => (l.id === row.id ? row : l))),
+  });
+
+  const addAlias = useMutation({
+    mutationFn: async ({ id, alias }: { id: string; alias: string }) =>
+      (await apiRequest("POST", `/api/gym/exercises/${id}/alias`, { alias })).json() as Promise<GymExercise>,
+    onSuccess: (row) => queryClient.setQueryData<GymExercise[]>(EXERCISES_KEY, (old = []) => old.map((e) => (e.id === row.id ? row : e))),
   });
 
   const addExercise = useMutation({
@@ -99,8 +150,8 @@ export function useGym(enabled: boolean) {
     commitPlan(mapItems(plan, exercise, ({ progressedOn, prevWeight, ...i }) => ({ ...i, weight })));
   };
 
-  const pattern = (exercise: string) => exercises.find((e) => e.name === exercise)?.pattern ?? "";
-  const planItem = (exercise: string) => currentPlan()?.days.flatMap((d) => d.items).find((i) => normalize(i.exercise) === normalize(exercise));
+  const pattern = (exercise: string) => (exercises.find((e) => e.name === exercise) ?? exercises.find((e) => sameExercise(e.name, exercise)))?.pattern ?? "";
+  const planItem = (exercise: string) => currentPlan()?.days.flatMap((d) => d.items).find((i) => sameExercise(i.exercise, exercise));
   const verdictFor = (it: PlanItem, withLogs: { exercise: string; weight: number; sets: number; reps: number; date: string | Date }[] = freshLogs()) =>
     coach(it, withLogs, pattern(it.exercise));
 
@@ -186,10 +237,10 @@ export function useGym(enabled: boolean) {
     const todays = withLogs.filter((l) => todayKey(new Date(l.date)) === day);
     const items = (planDay?.items ?? []).map((it) => {
       const s = sessionsOf(it.exercise, todays)[0];
-      const variantLogs = todays.filter((l) => "variantOf" in l && l.variantOf && normalize(l.variantOf as string) === normalize(it.exercise));
+      const variantLogs = todays.filter((l) => "variantOf" in l && l.variantOf && sameExercise(l.variantOf as string, it.exercise));
       const variants = Array.from(new Set(variantLogs.map((l) => l.exercise)));
       const sets = (s?.reps.length ?? 0) + variantLogs.reduce((a, l) => a + l.sets, 0);
-      return { it, sets, done: marked.has(it.exercise) || sets >= it.sets, session: s, variants };
+      return { it, sets, done: Array.from(marked).some((m) => sameExercise(m, it.exercise)) || sets >= it.sets, session: s, variants };
     });
     const blockIds = (planDay?.blocks ?? []).flatMap((b) => b.lines.map((l) => `${b.title}/${l}`));
     return {
@@ -197,7 +248,7 @@ export function useGym(enabled: boolean) {
       blocksDone: blockIds.filter((id) => marked.has(id)).length, blocksTotal: blockIds.length,
       sets: todays.reduce((a, l) => a + l.sets, 0),
       volume: todays.reduce((a, l) => a + l.weight * l.sets * l.reps, 0),
-      exercisesLogged: new Set(todays.map((l) => normalize(l.exercise))).size,
+      exercisesLogged: new Set(todays.map((l) => exerciseKey(l.exercise))).size,
       completed: !!latestDay(day)?.completedAt,
     };
   };
@@ -213,7 +264,7 @@ export function useGym(enabled: boolean) {
     freshLogs, pattern, planItem, verdictFor, applyVerdict, revertChange,
     days, dayRow, toggleDone, setCompleted, todaySummary,
     loading: logsQ.isLoading || exQ.isLoading,
-    logBatch, deleteLogs, addExercise, removeExercise,
+    logBatch, deleteLogs, restoreLogs, trashedLogs, trashed, updateLog, addAlias, addExercise, removeExercise,
   };
 }
 

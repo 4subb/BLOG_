@@ -34,6 +34,11 @@ export default function F1Season({ onGoNews }: { onGoNews?: () => void }) {
 
   return (
     <div className="space-y-20 sm:space-y-28">
+      {data.stale && (
+        <p className="label-mono border border-dashed border-rock/60 px-4 py-3 text-muted-foreground" role="status">
+          {L("Algunos datos no se pudieron actualizar · última copia", "Some data couldn't be refreshed · last copy")} {fmtDateTime(data.updatedAt)}
+        </p>
+      )}
       <ChampionBlock data={data} />
       <TitleFight data={data} />
       <div className="grid gap-12 lg:grid-cols-2">

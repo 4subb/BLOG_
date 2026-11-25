@@ -103,7 +103,7 @@ export default function PlanEditor({ gym, onClose }: { gym: GymApi; onClose: () 
                   {L("Series", "Sets")}
                   <input type="number" min={1} max={20} value={it.sets} onChange={(e) => setItem(d.dow, idx, { sets: Math.min(20, num(e.target.value, 1)) })} className={cn(field, "w-14")} />
                 </label>
-                <div className="col-span-4 flex items-center gap-1 text-xs text-muted-foreground">
+                <div className="col-span-4 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                   Reps
                   {it.reps === "max" ? (
                     <span className="font-mono text-foreground">{L("máx", "max")}</span>

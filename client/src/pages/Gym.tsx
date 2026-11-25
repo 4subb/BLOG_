@@ -19,7 +19,7 @@ export default function Gym() {
   const { t } = useTranslation();
   const { L } = useLang();
   const { user, isLoading } = useAuth();
-  const gym = useGym(!!user);
+  const gym = useGym(user?.id);
   const [prefill, setPrefill] = useState<{ text: string; n: number }>();
   const chatRef = useRef<HTMLDivElement>(null);
   const weekRef = useRef<HTMLElement>(null);
@@ -70,8 +70,8 @@ export default function Gym() {
         <>
           <section className="page-container py-20 sm:py-28">
             <SectionHead index="01" title={L("Registro", "Log")} aside={L("Escribe como hablas", "Write like you talk")} className="mb-10" />
-            <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-              <div ref={chatRef}>
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+              <div ref={chatRef} className="min-w-0">
                 <GymChat gym={gym} userId={user.id} prefill={prefill} />
               </div>
               <PlanToday gym={gym} onPick={pick} onCreate={openEditor} />

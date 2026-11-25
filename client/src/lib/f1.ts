@@ -7,8 +7,8 @@ export type { F1Driver, F1Race, F1Season };
 export function useF1Season() {
   return useQuery<F1Season>({
     queryKey: ["/api/f1/season"],
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000, // con la página abierta, se refresca sola (el servidor cachea 10 min)
+    staleTime: 60 * 1000,
+    refetchInterval: 5 * 60 * 1000, // con la página abierta, se refresca sola (el servidor cachea 10 min)
     refetchOnWindowFocus: true,
     retry: 1,
   });

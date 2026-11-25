@@ -5,7 +5,7 @@ import {
   comments, type Comment, type InsertComment,
   postLikes, savedPosts,
   appRankings, appSchedule, type AppRanking, type InsertAppRanking, type AppEvent, type InsertAppEvent, gymLogs, type GymLog, type InsertGymLog,
-  gymExercises, gymPlans, gymDays, gymPrefs, type GymPrefs, type GymDay, type GymExercise, type InsertGymExercise, type InsertGymLogBatch,
+  gymExercises, gymPlans, gymDays, gymPrefs, type GymPrefs, type GymDay, type GymExercise, type InsertGymExercise, type InsertGymLogBatch, type UpdateGymLog, type RestoreGymLogs,
   spotifyTokens, type SpotifyToken,
   media, type Media
 } from "@shared/schema";
@@ -61,6 +61,9 @@ export interface IStorage {
   updateGymSettings(userId: string, isPublic: boolean, gender: string): Promise<User>;
   createGymLogs(userId: string, batch: InsertGymLogBatch): Promise<GymLog[]>;
   deleteGymLogs(userId: string, ids: string[]): Promise<number>;
+  restoreGymLogs(userId: string, logs: RestoreGymLogs["logs"]): Promise<GymLog[]>;
+  updateGymLog(userId: string, id: string, patch: UpdateGymLog): Promise<GymLog | undefined>;
+  addGymExerciseAlias(userId: string, id: string, alias: string): Promise<GymExercise | undefined>;
   getGymExercises(userId: string): Promise<GymExercise[]>;
   createGymExercise(userId: string, ex: InsertGymExercise): Promise<GymExercise>;
   deleteGymExercise(userId: string, id: string): Promise<boolean>;
@@ -162,6 +165,27 @@ export class DrizzleStorage implements IStorage {
     if (!ids.length) return 0;
     const result = await db.delete(gymLogs).where(and(eq(gymLogs.userId, userId), inArray(gymLogs.id, ids))).returning({ id: gymLogs.id });
     return result.length;
+  }
+
+  // Idempotente: si un id ya existe no se toca, y solo se devuelven filas del propio usuario
+  async restoreGymLogs(userId: string, logs: RestoreGymLogs["logs"]): Promise<GymLog[]> {
+    await db.insert(gymLogs).values(logs.map((l) => ({ ...l, userId }))).onConflictDoNothing();
+    return db.select().from(gymLogs).where(and(eq(gymLogs.userId, userId), inArray(gymLogs.id, logs.map((l) => l.id))));
+  }
+
+  async updateGymLog(userId: string, id: string, patch: UpdateGymLog): Promise<GymLog | undefined> {
+    const [row] = await db.update(gymLogs).set(patch).where(and(eq(gymLogs.userId, userId), eq(gymLogs.id, id))).returning();
+    return row;
+  }
+
+  // El chat aprende cómo llama el usuario a un ejercicio (los 12 alias más recientes)
+  async addGymExerciseAlias(userId: string, id: string, alias: string): Promise<GymExercise | undefined> {
+    const own = and(eq(gymExercises.userId, userId), eq(gymExercises.id, id));
+    const [ex] = await db.select().from(gymExercises).where(own);
+    if (!ex) return undefined;
+    const aliases = [...ex.aliases.filter((a) => a !== alias), alias].slice(-12);
+    const [row] = await db.update(gymExercises).set({ aliases }).where(own).returning();
+    return row;
   }
 
   // Cada usuario arma su propio catálogo (empieza vacío)

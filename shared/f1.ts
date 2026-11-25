@@ -17,4 +17,6 @@ export type F1Season = {
   nextRace: F1Race | null;
   title: { decided: boolean; leaderId: string | null; lead: number; maxRemaining: number };
   updatedAt: string;
+  /** Alguna parte no se pudo refrescar: los datos son de `updatedAt` */
+  stale: boolean;
 };

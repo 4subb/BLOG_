@@ -219,6 +219,27 @@ export const gymDaySchema = z.object({
   done: z.array(z.string().min(1).max(260)).max(60),
   completed: z.boolean(),
 });
+// Corregir un registro (mal nombre, peso, series o reps)
+export const updateGymLogSchema = z.object({
+  exercise: z.string().trim().min(1).max(80),
+  weight: z.number().min(0).max(1000),
+  sets: z.number().int().min(1).max(50),
+  reps: z.number().int().min(1).max(500),
+  variantOf: z.string().trim().min(1).max(80).nullable(),
+}).partial().refine((v) => Object.keys(v).length > 0);
+// Rehacer: vuelve a insertar registros borrados con su id y fecha originales
+export const restoreGymLogsSchema = z.object({
+  logs: z.array(z.object({
+    id: z.string().uuid(),
+    date: z.coerce.date(),
+    exercise: z.string().trim().min(1).max(80),
+    weight: z.number().min(0).max(1000),
+    sets: z.number().int().min(1).max(50),
+    reps: z.number().int().min(1).max(500),
+    notes: z.string().max(300).nullable().optional(),
+    variantOf: z.string().trim().min(1).max(80).nullable().optional(),
+  })).min(1).max(100),
+});
 // Registro desde el chat: varias entradas de golpe, con fecha opcional ("ayer ...")
 export const insertGymLogBatchSchema = z.object({
   date: z.coerce.date().optional(),
@@ -281,5 +302,7 @@ export type InsertGymLog = z.infer<typeof insertGymLogSchema>;
 export type GymExercise = typeof gymExercises.$inferSelect;
 export type InsertGymExercise = z.infer<typeof insertGymExerciseSchema>;
 export type InsertGymLogBatch = z.infer<typeof insertGymLogBatchSchema>;
+export type UpdateGymLog = z.infer<typeof updateGymLogSchema>;
+export type RestoreGymLogs = z.infer<typeof restoreGymLogsSchema>;
 export type GymDay = typeof gymDays.$inferSelect;
 export type GymPrefs = { unit: "kg" | "lb" };
